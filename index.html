@@ -1,0 +1,3403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAT 题库与多题型管理系统 - 管理后台</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"]
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.45); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background-color: rgba(100, 116, 139, 0.7); }
+        .fade-in { animation: fadeIn 0.22s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- =================================================================== -->
+    <!-- ADMIN PORTAL HEADER                                                 -->
+    <!-- =================================================================== -->
+    <header class="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-indigo-700 text-white flex items-center justify-center shadow-sm flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-sm sm:text-base font-bold text-slate-900 truncate">SAT 题库与多题型管理系统</h1>
+                        <span class="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-white">
+                            管理后台
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span id="db-status-text" class="text-[11px] text-slate-500 font-medium truncate">正在连接数据库...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 flex-shrink-0">
+                <button
+                    id="btn-open-gcloud-tts-modal"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+                >
+                    🎙️ Google Cloud 语音配置
+                </button>
+                <button
+                    id="btn-open-firebase-modal"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
+                >
+                    ☁️ Firebase 配置
+                </button>
+                <a
+                    href="index.html"
+                    target="_blank"
+                    class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                >
+                    🎓 打开学生前台 ↗
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- =================================================================== -->
+    <!-- MAIN ADMIN WORKSPACE                                                -->
+    <!-- =================================================================== -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5 fade-in">
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button
+                    data-admin-tab="strategy"
+                    class="admin-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 text-white shadow-xs transition-all cursor-pointer"
+                >
+                    🎯 选题策略与组号开放
+                </button>
+                <button
+                    data-admin-tab="bank"
+                    class="admin-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                    📚 题库管理 (<span id="admin-bank-count">0</span>)
+                </button>
+                <button
+                    data-admin-tab="types"
+                    class="admin-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                    🗂️ 题型管理 (<span id="admin-types-count">0</span>)
+                </button>
+                <button
+                    data-admin-tab="analytics"
+                    class="admin-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                    📊 学情监控与记录管理
+                </button>
+            </div>
+            <div id="audio-batch-status" class="hidden text-xs font-semibold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200"></div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- TAB 1: STRATEGY & GROUP SCOPE CONFIGURATION                     -->
+        <!-- =============================================================== -->
+        <section id="admin-tab-strategy" class="space-y-5 fade-in">
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">🎯 前台自动选题策略与组号开放</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">配置学生前台（index.html）的智能出题算法、开放的组号范围与允许练习的题型。</p>
+                    </div>
+                    <button
+                        id="btn-save-config"
+                        type="button"
+                        class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition-all cursor-pointer flex-shrink-0"
+                    >
+                        💾 保存策略并同步到前台
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">选题算法模式</label>
+                        <select id="cfg-strategy" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="adaptive">自适应难度 (Adaptive Difficulty)</option>
+                            <option value="weakest_first">最薄弱考点优先 (Weakest Topic First)</option>
+                            <option value="wrong_review">错题优先复习 (Missed Question Review)</option>
+                            <option value="sequential">按题库顺序练习 (Sequential Order)</option>
+                            <option value="random">随机抽题练习 (Random Practice)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">连对升级难度阈值</label>
+                        <input
+                            id="cfg-threshold"
+                            type="number"
+                            min="1"
+                            max="10"
+                            value="2"
+                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">开放指定组号给前台练习</label>
+                        <select id="cfg-focus-group" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">全部组号（不限制）</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <input id="cfg-allow-hints" type="checkbox" checked class="w-4 h-4 accent-indigo-600 rounded cursor-pointer" />
+                        <label for="cfg-allow-hints" class="text-xs sm:text-sm font-medium text-slate-700 cursor-pointer">
+                            允许学生在前台查看「💡 Tutor Hint（解题提示）」
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/80 text-xs sm:text-sm text-indigo-900">
+                        <span class="flex-shrink-0">🔒</span>
+                        <span>默认规则：题库每道题仅限前台练习 <strong>1 次</strong>；若再次开放已做过的题目，保存时将弹出确认清单。</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
+                    <div class="space-y-2.5">
+                        <div class="text-xs font-bold text-slate-800">限定前台练习题型（不勾选表示全部题型开放）</div>
+                        <div id="cfg-focus-types" class="flex flex-wrap gap-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 min-h-[58px]"></div>
+                    </div>
+                    <div class="space-y-2.5">
+                        <div class="text-xs font-bold text-slate-800">限定细分考点（不勾选表示全部考点开放）</div>
+                        <div id="cfg-focus-categories" class="flex flex-wrap gap-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 min-h-[58px] max-h-[160px] overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- TAB 2: QUESTION BANK MANAGEMENT                                 -->
+        <!-- =============================================================== -->
+        <section id="admin-tab-bank" class="hidden space-y-4 fade-in">
+            <!-- Top Toolbar -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div id="bank-type-pills" class="flex flex-wrap items-center gap-1.5"></div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            id="btn-open-add-question"
+                            type="button"
+                            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition-colors cursor-pointer"
+                        >
+                            ➕ 新增题目
+                        </button>
+                        <label class="px-3.5 py-2 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer">
+                            ⬆️ 导入 JSON
+                            <input id="input-import-json" type="file" accept=".json,application/json" class="hidden" />
+                        </label>
+                        <button
+                            id="btn-export-all-json"
+                            type="button"
+                            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        >
+                            ⬇️ 导出全部 JSON
+                        </button>
+                        <button
+                            id="btn-open-group-export"
+                            type="button"
+                            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        >
+                            📦 按组号导出
+                        </button>
+                        <button
+                            id="btn-generate-missing-audio"
+                            type="button"
+                            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+                        >
+                            🔊 一键补全缺失语音
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search & Filters -->
+                <div class="flex flex-wrap items-center gap-2.5 pt-3 border-t border-slate-100">
+                    <input
+                        id="bank-search-input"
+                        type="text"
+                        placeholder="搜索题目标题、短文、组号或考点..."
+                        class="flex-1 min-w-[200px] bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <select id="bank-filter-group" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">全部组号</option>
+                    </select>
+                    <select id="bank-filter-category" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">全部考点</option>
+                    </select>
+                    <select id="bank-filter-difficulty" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">全部难度</option>
+                        <option value="easy">Easy (基础)</option>
+                        <option value="medium">Medium (中等)</option>
+                        <option value="hard">Hard (困难)</option>
+                    </select>
+                </div>
+
+                <!-- Batch Delete Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                            <input id="bank-select-all" type="checkbox" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer" />
+                            <span>全选当前列表</span>
+                        </label>
+                        <span id="bank-selected-count" class="text-xs font-semibold text-slate-500">已选 0 题</span>
+                        <button
+                            id="btn-clear-bank-selection"
+                            type="button"
+                            class="hidden px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        >
+                            取消勾选
+                        </button>
+                    </div>
+                    <button
+                        id="btn-batch-delete-questions"
+                        type="button"
+                        disabled
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-45 disabled:cursor-not-allowed shadow-xs transition-all cursor-pointer"
+                    >
+                        🗑️ 批量删除所选
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Cards List -->
+            <div id="admin-questions-list" class="space-y-3"></div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- TAB 3: QUESTION TYPES MANAGEMENT                                -->
+        <!-- =============================================================== -->
+        <section id="admin-tab-types" class="hidden space-y-4 fade-in">
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">🗂️ 题目类型与细分考点字典</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">自定义 SAT 题型徽章与对应考点，保存后实时同步到题目录入与学生前台。</p>
+                    </div>
+                    <button
+                        id="btn-open-add-type"
+                        type="button"
+                        class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition-colors cursor-pointer flex-shrink-0"
+                    >
+                        ➕ 新增题目类型
+                    </button>
+                </div>
+                <div id="admin-types-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- TAB 4: STUDENT ANALYTICS & ATTEMPTS MANAGEMENT                  -->
+        <!-- =============================================================== -->
+        <section id="admin-tab-analytics" class="hidden space-y-5 fade-in">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
+                    <div class="text-xs font-medium text-slate-500">题库总题量</div>
+                    <div id="admin-stat-questions" class="mt-1 text-2xl font-bold text-slate-900">0</div>
+                </div>
+                <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
+                    <div class="text-xs font-medium text-slate-500">累计作答人次</div>
+                    <div id="admin-stat-attempts" class="mt-1 text-2xl font-bold text-indigo-700">0</div>
+                </div>
+                <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
+                    <div class="text-xs font-medium text-slate-500">全站平均正确率</div>
+                    <div id="admin-stat-accuracy" class="mt-1 text-2xl font-bold text-emerald-600">--%</div>
+                </div>
+                <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
+                    <div class="text-xs font-medium text-slate-500">最薄弱考点</div>
+                    <div id="admin-stat-weakest" class="mt-1 text-base font-bold text-rose-600 truncate">暂无数据</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900">各题型正确率分布</h3>
+                    <div id="admin-type-breakdown" class="space-y-3"></div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-slate-900">各细分考点正确率</h3>
+                        <button id="btn-clear-all-attempts" type="button" class="text-xs text-slate-400 hover:text-rose-600 cursor-pointer">
+                            清空学情数据
+                        </button>
+                    </div>
+                    <div id="admin-category-breakdown" class="space-y-3 max-h-[280px] overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+
+            <!-- All Attempt Records Filter, Batch Export & Batch Delete -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">📝 全部答题记录明细与批量管理</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">筛选查看每条答题的精确时间、所选选项与正确情况，支持批量勾选导出对应题目 JSON 或同步删除数据库记录。</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                            <input id="attempts-select-all" type="checkbox" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer" />
+                            <span>全选当前记录</span>
+                        </label>
+                        <span id="attempts-selected-count" class="text-xs font-semibold text-slate-500">已选 0 条</span>
+                        <button
+                            id="btn-clear-attempts-selection"
+                            type="button"
+                            class="hidden px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        >
+                            取消勾选
+                        </button>
+                        <button
+                            id="btn-batch-export-attempts"
+                            type="button"
+                            disabled
+                            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-45 disabled:cursor-not-allowed shadow-xs transition-all cursor-pointer"
+                        >
+                            ⬇️ 批量导出所选题目 JSON
+                        </button>
+                        <button
+                            id="btn-batch-delete-attempts"
+                            type="button"
+                            disabled
+                            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-45 disabled:cursor-not-allowed shadow-xs transition-all cursor-pointer"
+                        >
+                            🗑️ 批量删除所选记录
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <input
+                        id="attempts-search-input"
+                        type="text"
+                        placeholder="搜索题目标题、组号或考点..."
+                        class="flex-1 min-w-[180px] bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <select id="attempts-filter-result" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">全部结果</option>
+                        <option value="correct">仅看答对 (✓)</option>
+                        <option value="incorrect">仅看答错 (✕)</option>
+                    </select>
+                    <select id="attempts-filter-type" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">全部题型</option>
+                    </select>
+                    <select id="attempts-filter-date" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">全部时间</option>
+                        <option value="today">今天</option>
+                        <option value="7days">近 7 天</option>
+                        <option value="30days">近 30 天</option>
+                    </select>
+                </div>
+
+                <!-- Filtered Summary & Attempts List -->
+                <div id="attempts-filter-summary" class="text-xs text-slate-500 font-medium"></div>
+                <div id="admin-attempts-list" class="space-y-2 max-h-[460px] overflow-y-auto pr-1"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- =================================================================== -->
+    <!-- MODAL: ADD / EDIT SAT QUESTION                                      -->
+    <!-- =================================================================== -->
+    <div id="question-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-auto overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/70">
+                <h3 id="question-modal-title" class="text-base font-bold text-slate-900">新增 SAT 题目</h3>
+                <button id="close-question-modal" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="question-form" class="p-5 space-y-4 overflow-y-auto flex-1">
+                <input id="qf-id" type="hidden" />
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">题目类型</label>
+                        <select id="qf-type" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">细分考点</label>
+                        <select id="qf-category" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">难度</label>
+                        <select id="qf-difficulty" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="easy">Easy (基础)</option>
+                            <option value="medium">Medium (中等)</option>
+                            <option value="hard">Hard (困难)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">组号（选填，如 G1）</label>
+                        <input id="qf-group" type="text" placeholder="如 G1 / Unit1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">题目标题</label>
+                        <input id="qf-title" type="text" required placeholder="输入题目标题..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">题干短文 (Passage)</label>
+                    <textarea id="qf-passage" rows="4" required placeholder="输入 SAT 阅读短文..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">问题 (Question Stem)</label>
+                    <input id="qf-question" type="text" required placeholder="Which choice most logically completes the text?" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-slate-700">四个选项 (A - D)</label>
+                    <div class="grid grid-cols-1 gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 text-xs font-bold text-slate-500">A.</span>
+                            <input id="qf-opt-0" type="text" required class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 text-xs font-bold text-slate-500">B.</span>
+                            <input id="qf-opt-1" type="text" required class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 text-xs font-bold text-slate-500">C.</span>
+                            <input id="qf-opt-2" type="text" required class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 text-xs font-bold text-slate-500">D.</span>
+                            <input id="qf-opt-3" type="text" required class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">正确答案</label>
+                        <select id="qf-correct" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="0">选项 A</option>
+                            <option value="1">选项 B</option>
+                            <option value="2">选项 C</option>
+                            <option value="3">选项 D</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">解题提示 (Tutor Hint)</label>
+                        <input id="qf-hint" type="text" placeholder="给学生的英文解题提示..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">官方英文解析 (Explanation)</label>
+                    <textarea id="qf-explanation" rows="4" placeholder="Correct Answer: A..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                    <button id="cancel-question-modal" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                        取消
+                    </button>
+                    <button id="submit-question-btn" type="submit" class="px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs cursor-pointer">
+                        💾 保存题目
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- MODAL: ADD / EDIT QUESTION TYPE                                     -->
+    <!-- =================================================================== -->
+    <div id="type-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <h3 id="type-modal-title" class="text-base font-bold text-slate-900">新增题目类型</h3>
+                <button id="close-type-modal" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="type-form" class="p-5 space-y-4">
+                <input id="tf-edit-id" type="hidden" />
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">英文名称 (如 Logic)</label>
+                    <input id="tf-name" type="text" required placeholder="Logic" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">中文显示名 (如 逻辑题 (Logic))</label>
+                    <input id="tf-label-zh" type="text" required placeholder="逻辑题 (Logic)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">徽章主题色</label>
+                    <select id="tf-color" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="indigo">靛蓝 (Indigo)</option>
+                        <option value="violet">紫罗兰 (Violet)</option>
+                        <option value="emerald">翡翠绿 (Emerald)</option>
+                        <option value="sky">天蓝 (Sky)</option>
+                        <option value="amber">琥珀黄 (Amber)</option>
+                        <option value="rose">玫瑰红 (Rose)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">细分考点列表（用逗号分隔）</label>
+                    <textarea id="tf-categories" rows="3" placeholder="Strengthen, Weaken, Inference, Assumption" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button id="cancel-type-modal" type="button" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                        取消
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                        保存题型
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- MODAL: EXPORT QUESTIONS BY GROUP                                    -->
+    <!-- =================================================================== -->
+    <div id="group-export-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <h3 class="text-base font-bold text-slate-900">📦 按组号导出 JSON</h3>
+                <button id="close-group-export-modal" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">选择要导出的组号</label>
+                    <select id="export-group-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div class="flex justify-end gap-2.5 pt-1">
+                    <button id="cancel-group-export-modal" type="button" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                        取消
+                    </button>
+                    <button id="confirm-group-export-btn" type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                        ⬇️ 导出 JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- MODAL: FIREBASE CLOUD DATABASE CONFIGURATION                        -->
+    <!-- =================================================================== -->
+    <div id="firebase-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl my-auto overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/70">
+                <h3 class="text-base font-bold text-slate-900">☁️ Firebase 云端数据库配置</h3>
+                <button id="close-firebase-modal" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 overflow-y-auto flex-1">
+                <div id="fb-current-status" class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700"></div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">粘贴 Firebase Web 配置对象 (JSON 或 firebaseConfig 代码)</label>
+                    <textarea id="fb-config-input" rows="6" placeholder='{ "apiKey": "...", "projectId": "..." }' class="w-full font-mono text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+
+                <div id="fb-share-link-box" class="hidden space-y-1.5 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                    <div class="text-xs font-bold text-emerald-800">🔗 学生前台直连链接（自动同步此 Firebase 配置）</div>
+                    <div class="flex items-center gap-2">
+                        <input id="fb-student-share-url" type="text" readonly class="flex-1 bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-600" />
+                        <button id="btn-copy-student-url" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 cursor-pointer flex-shrink-0">
+                            复制链接
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-700">推荐 Firestore 安全规则</span>
+                        <button id="btn-copy-firestore-rules" type="button" class="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer">
+                            📋 复制规则
+                        </button>
+                    </div>
+                    <pre id="firestore-rules-snippet" class="bg-slate-900 text-slate-100 rounded-xl p-3 text-[11px] overflow-x-auto">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/public/data/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}</pre>
+                </div>
+            </div>
+            <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <button id="btn-clear-firebase-config" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                    清除自定义配置
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="cancel-firebase-modal" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 cursor-pointer">
+                        取消
+                    </button>
+                    <button id="btn-save-firebase-config" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                        保存并连接
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- MODAL: GOOGLE CLOUD TEXT-TO-SPEECH CONFIGURATION                    -->
+    <!-- =================================================================== -->
+    <div id="gcloud-tts-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg my-auto overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-emerald-50/70">
+                <h3 class="text-base font-bold text-slate-900">🎙️ Google Cloud 语音配置 (Text-to-Speech)</h3>
+                <button id="close-gcloud-tts-modal" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 overflow-y-auto flex-1">
+                <div id="gc-current-status" class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700"></div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Google Cloud API Key（仅保存在本地浏览器）</label>
+                    <input id="gc-api-key-input" type="password" placeholder="AIzaSy..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">语音模型家族（每月免费额度）</label>
+                        <select id="gc-model-tier-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="Chirp3-HD">Chirp 3: HD（100万字/月免费 · 推荐）</option>
+                            <option value="Wavenet">WaveNet（400万字/月免费）</option>
+                            <option value="Neural2">Neural2（100万字/月免费）</option>
+                            <option value="Studio">Studio（100万字/月免费）</option>
+                            <option value="Standard">Standard（400万字/月免费）</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">语速 (Speaking Rate)</label>
+                        <select id="gc-rate-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="0.85">0.85x（稍慢清晰）</option>
+                            <option value="0.92">0.92x（略慢教学）</option>
+                            <option value="1">1.00x（标准语速）</option>
+                            <option value="1.08">1.08x（轻快流畅）</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="block text-xs font-semibold text-slate-700">美式英语人声 (en-US)</label>
+                        <button id="btn-fetch-gc-voices" type="button" class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer">
+                            🔄 拉取官方最新人声
+                        </button>
+                    </div>
+                    <select id="gc-voice-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+                </div>
+            </div>
+            <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <button id="btn-clear-gcloud-config" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                    清除密钥
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="btn-test-gcloud-voice" type="button" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer">
+                        🔊 测试语音
+                    </button>
+                    <button id="btn-save-gcloud-config" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 cursor-pointer">
+                        💾 保存配置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- MODAL: REOPEN QUESTIONS CONFIRMATION (First-Time vs Repeat Check)   -->
+    <!-- =================================================================== -->
+    <div id="reopen-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-auto overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-amber-50/70">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">⚠️ 再次开放题目确认</h3>
+                    <p id="reopen-summary-text" class="text-xs text-slate-600 mt-0.5"></p>
+                </div>
+                <button id="close-reopen-modal" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4 overflow-y-auto flex-1">
+                <!-- Repeat Questions (Not First Time) -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-rose-700">🔁 非第一次练习（已做过的题目）</span>
+                        <span id="reopen-repeat-count" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700">0 题</span>
+                    </div>
+                    <div id="reopen-repeat-list" class="space-y-1.5 max-h-[180px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- First-Time Questions -->
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-700">🆕 第一次练习（未做过的题目）</span>
+                        <span id="reopen-first-count" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">0 题</span>
+                    </div>
+                    <div id="reopen-first-list" class="space-y-1.5 max-h-[180px] overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+
+            <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p class="text-xs text-slate-600">
+                    请选择：仅开放未做过的新题，或为上述「非第一次」的题目再开放 <strong>1 次</strong> 练习机会。
+                </p>
+                <div class="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
+                    <button id="btn-cancel-reopen" type="button" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 cursor-pointer">
+                        取消
+                    </button>
+                    <button id="btn-save-only-new" type="button" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer">
+                        🔒 仅开放新题（跳过已做）
+                    </button>
+                    <button id="btn-confirm-reopen" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs cursor-pointer">
+                        ✅ 确认重开已做题
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- CUSTOM CONFIRMATION DIALOG                                          -->
+    <!-- =================================================================== -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm p-5 space-y-4">
+            <h3 id="confirm-title" class="text-base font-bold text-slate-900">确认操作</h3>
+            <p id="confirm-message" class="text-sm text-slate-600 leading-relaxed"></p>
+            <div class="flex justify-end gap-2.5 pt-2">
+                <button id="confirm-cancel-btn" type="button" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                    取消
+                </button>
+                <button id="confirm-ok-btn" type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 cursor-pointer">
+                    确认执行
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- =================================================================== -->
+    <!-- ADMIN BACKEND SCRIPT (Complete, Self-Contained & Valid)             -->
+    <!-- =================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore,
+            collection,
+            doc,
+            addDoc,
+            setDoc,
+            deleteDoc,
+            onSnapshot,
+            getDocs,
+            getDoc
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // =====================================================================
+        // 1. SHARED DATABASE KEYS, DEFAULT QUESTION TYPES & SEED DATA
+        // =====================================================================
+        const LS_KEYS = {
+            QUESTIONS: "sat_db_questions_v1",
+            ATTEMPTS: "sat_db_attempts_v1",
+            CONFIG: "sat_db_config_v1",
+            FIREBASE_CONFIG: "sat_custom_firebase_config_v1",
+            GCLOUD_TTS_CONFIG: "sat_gcloud_tts_config_v1",
+            GCLOUD_TTS_VOICES_CACHE: "sat_gcloud_tts_voices_cache_v1"
+        };
+
+        const CUSTOM_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyBvwvMrPXJxumISFEmQw-VHl-kQ1StmLMs",
+            authDomain: "sat-practice-9922b.firebaseapp.com",
+            projectId: "sat-practice-9922b",
+            storageBucket: "sat-practice-9922b.firebasestorage.app",
+            messagingSenderId: "623765264684",
+            appId: "1:623765264684:web:2652304a04cc72dda93489"
+        };
+
+        const AUDIO_IDB_NAME = "sat_logic_audio_db_v1";
+        const AUDIO_IDB_STORE = "question_audio";
+
+        const DEFAULT_GCLOUD_VOICES = {
+            "Chirp3-HD": [
+                { name: "en-US-Chirp3-HD-Aoede", label: "Aoede（女声 · 自然亲切）" },
+                { name: "en-US-Chirp3-HD-Kore", label: "Kore（女声 · 清晰专业）" },
+                { name: "en-US-Chirp3-HD-Leda", label: "Leda（女声 · 温和标准）" },
+                { name: "en-US-Chirp3-HD-Charon", label: "Charon（男声 · 沉稳清晰）" },
+                { name: "en-US-Chirp3-HD-Fenrir", label: "Fenrir（男声 · 饱满自然）" },
+                { name: "en-US-Chirp3-HD-Puck", label: "Puck（男声 · 轻快流畅）" }
+            ],
+            "Wavenet": [
+                { name: "en-US-Wavenet-F", label: "Wavenet-F（女声 · 清晰自然）" },
+                { name: "en-US-Wavenet-H", label: "Wavenet-H（女声 · 温和教学）" },
+                { name: "en-US-Wavenet-C", label: "Wavenet-C（女声 · 标准美音）" },
+                { name: "en-US-Wavenet-D", label: "Wavenet-D（男声 · 沉稳清晰）" },
+                { name: "en-US-Wavenet-I", label: "Wavenet-I（男声 · 自然流畅）" }
+            ],
+            "Neural2": [
+                { name: "en-US-Neural2-F", label: "Neural2-F（女声 · 自然美音）" },
+                { name: "en-US-Neural2-C", label: "Neural2-C（女声 · 清晰标准）" },
+                { name: "en-US-Neural2-H", label: "Neural2-H（女声 · 亲切柔和）" },
+                { name: "en-US-Neural2-D", label: "Neural2-D（男声 · 清晰稳重）" },
+                { name: "en-US-Neural2-J", label: "Neural2-J（男声 · 轻松自然）" }
+            ],
+            "Studio": [
+                { name: "en-US-Studio-O", label: "Studio-O（女声 · 播音室级）" },
+                { name: "en-US-Studio-Q", label: "Studio-Q（男声 · 播音室级）" }
+            ],
+            "Standard": [
+                { name: "en-US-Standard-C", label: "Standard-C（女声 · 标准清晰）" },
+                { name: "en-US-Standard-F", label: "Standard-F（女声 · 标准美音）" },
+                { name: "en-US-Standard-D", label: "Standard-D（男声 · 标准美音）" },
+                { name: "en-US-Standard-I", label: "Standard-I（男声 · 标准清晰）" }
+            ]
+        };
+
+        const DEFAULT_GCLOUD_TTS_CONFIG = {
+            apiKey: "",
+            modelTier: "Chirp3-HD",
+            voiceName: "en-US-Chirp3-HD-Aoede",
+            speakingRate: 1
+        };
+
+        const TYPE_COLOR_STYLES = {
+            indigo: { badge: "bg-indigo-100 text-indigo-700 border-indigo-200", dot: "bg-indigo-600" },
+            violet: { badge: "bg-violet-100 text-violet-700 border-violet-200", dot: "bg-violet-600" },
+            emerald: { badge: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-600" },
+            sky: { badge: "bg-sky-100 text-sky-700 border-sky-200", dot: "bg-sky-600" },
+            amber: { badge: "bg-amber-100 text-amber-700 border-amber-200", dot: "bg-amber-600" },
+            rose: { badge: "bg-rose-100 text-rose-700 border-rose-200", dot: "bg-rose-600" }
+        };
+
+        const DEFAULT_QUESTION_TYPES = [
+            {
+                id: "logic",
+                name: "Logic",
+                labelZh: "逻辑题 (Logic)",
+                color: "indigo",
+                categories: ["Strengthen", "Weaken", "Inference", "Assumption", "Command of Evidence"]
+            },
+            {
+                id: "vocabulary",
+                name: "Vocabulary",
+                labelZh: "词汇题 (Vocabulary)",
+                color: "violet",
+                categories: ["Words in Context", "Precision & Tone", "Academic Vocabulary"]
+            },
+            {
+                id: "grammar",
+                name: "Grammar",
+                labelZh: "语法题 (Grammar)",
+                color: "emerald",
+                categories: ["Boundaries", "Form, Structure, and Sense", "Transitions"]
+            },
+            {
+                id: "reading",
+                name: "Reading Comprehension",
+                labelZh: "阅读理解 (Reading)",
+                color: "sky",
+                categories: ["Central Ideas & Details", "Text Structure & Purpose", "Cross-Text Connections"]
+            },
+            {
+                id: "rhetoric",
+                name: "Rhetorical Synthesis",
+                labelZh: "修辞综合 (Rhetoric)",
+                color: "amber",
+                categories: ["Rhetorical Synthesis", "Transitions"]
+            }
+        ];
+
+        const DIFFICULTY_META = {
+            easy: { label: "Easy · 基础", color: "bg-emerald-100 text-emerald-700" },
+            medium: { label: "Medium · 中等", color: "bg-amber-100 text-amber-700" },
+            hard: { label: "Hard · 困难", color: "bg-rose-100 text-rose-700" }
+        };
+
+        const DEFAULT_CONFIG = {
+            strategy: "adaptive",
+            allowHints: true,
+            autoAdvanceThreshold: 2,
+            focusGroup: "",
+            focusTypes: [],
+            focusCategories: [],
+            questionOpenQuota: {},
+            questionTypes: DEFAULT_QUESTION_TYPES.map((t) => ({ ...t, categories: [...t.categories] }))
+        };
+
+        const SEED_QUESTIONS = [
+            {
+                groupNumber: "G1",
+                questionType: "logic",
+                title: "Rooftop Gardens & Urban Cooling",
+                category: "Weaken",
+                difficulty: "medium",
+                passage: "Urban planners in Metropolis recently noted that commercial buildings with rooftop gardens had summer cooling costs averaging 18% lower than nearby buildings without rooftop gardens. Based on this comparison, the planners concluded that installing vegetation on roofs directly causes substantial reductions in air-conditioning energy use.",
+                question: "Which finding, if true, would most directly weaken the urban planners' conclusion?",
+                options: [
+                    "Most commercial buildings in Metropolis that have rooftop gardens were constructed within the last five years using high-efficiency insulation, whereas nearby buildings without gardens are mostly decades old.",
+                    "Rooftop gardens require regular irrigation and structural maintenance, which increases annual building operating expenses.",
+                    "Some residents of Metropolis prefer the visual appearance of rooftop gardens over traditional gravel roofs.",
+                    "During winter months, buildings with rooftop gardens experience roughly the same heating costs as buildings without them."
+                ],
+                correctIndex: 0,
+                hint: "Look closely at the causal claim: planners compare two groups of buildings and credit rooftop vegetation. Look for a confounding variable that explains the lower cooling costs.",
+                explanation: "Correct Answer: A\n• Logic Breakdown: The planners observe a correlation (buildings with rooftop gardens have 18% lower cooling costs) and conclude causation (rooftop vegetation causes lower AC usage).\n• Choice A introduces a strong alternative cause: the buildings with rooftop gardens are newer and built with high-efficiency insulation, while the comparison buildings are older. This directly weakens the causal link.\n• Choice B discusses maintenance costs, which does not refute lower AC energy use. Choice C is about aesthetics, and Choice D is about winter heating, which is irrelevant to summer cooling."
+            },
+            {
+                groupNumber: "G1",
+                questionType: "logic",
+                title: "Mesopotamian Clay Tokens & Accounting",
+                category: "Strengthen",
+                difficulty: "easy",
+                passage: "Archaeologist Denise Schmandt-Besserat proposed that small geometric clay tokens found across ancient Mesopotamian sites were not toys or decorative beads, as earlier scholars assumed, but rather an accounting system used to track agricultural commodities like grain and livestock.",
+                question: "Which finding, if true, would most directly support Schmandt-Besserat's hypothesis?",
+                options: [
+                    "The clay used to manufacture the tokens was sourced from riverbeds located within two kilometers of the settlements.",
+                    "Hollow clay spheres containing groups of tokens have been discovered with exterior markings that precisely match the shapes and quantities of the tokens sealed inside, alongside early pictographs for grain and sheep.",
+                    "Similar geometric patterns also appear on painted pottery vessels used during ceremonial banquets in later periods.",
+                    "Some ancient Mesopotamian households contained no clay tokens at all, even though they stored large quantities of barley."
+                ],
+                correctIndex: 1,
+                hint: "To support the accounting-system hypothesis, look for physical evidence tying the tokens directly to quantities and agricultural goods.",
+                explanation: "Correct Answer: B\n• Core Claim: The geometric clay tokens functioned as an agricultural accounting system rather than toys or beads.\n• Choice B provides direct corroborating evidence: sealed clay envelopes have exterior markings matching the exact shapes and counts of the tokens inside, paired with pictographs for grain and sheep—classic record-keeping.\n• Choice A only addresses raw material sourcing; Choice C mentions later decorative pottery; Choice D slightly undermines the universality of token use."
+            },
+            {
+                groupNumber: "G1",
+                questionType: "logic",
+                title: "Deep-Sea Bioluminescence & Camouflage",
+                category: "Inference",
+                difficulty: "medium",
+                passage: "In the mesopelagic zone of the ocean, where faint sunlight penetrates from above, many fish species possess light-producing organs exclusively on their undersides. Marine biologists observed that when overhead light intensity changes due to passing clouds, these fish rapidly adjust the brightness of their underside glow to match the downwelling light. Consequently, predators swimming below these fish ______",
+                question: "Which choice most logically completes the text?",
+                options: [
+                    "are attracted to the bright underside glow and can locate the fish more easily from a distance.",
+                    "cannot distinguish the fish's silhouette against the sunlit water above, making the fish effectively camouflaged.",
+                    "rely primarily on chemical scents rather than vision because all mesopelagic fish are completely invisible.",
+                    "migrate to shallower waters during cloudy days to avoid competing with bioluminescent species."
+                ],
+                correctIndex: 1,
+                hint: "Picture looking upward from below in dim water: normally a fish blocks overhead light and casts a dark shadow. What happens if its belly matches the exact brightness of the water above?",
+                explanation: "Correct Answer: B\n• Logical Chain: Faint sunlight enters from above, and the fish match their underside glow to that exact brightness (a mechanism known as counterillumination).\n• As a result, when predators look up from below, the fish's dark silhouette disappears against the bright background, effectively camouflaging it (Choice B).\n• Choice A reverses the survival benefit; Choice C overgeneralizes with 'all mesopelagic fish are completely invisible'; Choice D is unsupported by the passage."
+            },
+            {
+                groupNumber: "G1",
+                questionType: "logic",
+                title: "Remote Work Productivity Assumption",
+                category: "Assumption",
+                difficulty: "hard",
+                passage: "A technology firm offered its 400 software engineers the option to work remotely for six months. At the end of the trial, managers found that the 180 engineers who chose remote work completed 15% more code reviews per week than the 220 engineers who stayed in the office. The firm's leadership therefore concluded that requiring all engineers to work remotely will boost overall company productivity.",
+                question: "The leadership's conclusion depends on which of the following unstated assumptions?",
+                options: [
+                    "Engineers who worked in the office spent less time commuting than engineers who worked remotely.",
+                    "The engineers who voluntarily chose remote work were not already more productive or better suited to independent work than those who chose to remain in the office.",
+                    "Code reviews are the only task that software engineers at the firm are expected to perform.",
+                    "The company will save enough money on office rent to offset the cost of home-office equipment."
+                ],
+                correctIndex: 1,
+                hint: "Notice that the 180 remote engineers voluntarily CHOSE remote work. What bias must leadership rule out before mandating remote work for everyone?",
+                explanation: "Correct Answer: B\n• Logical Gap: This argument suffers from potential self-selection bias. The engineers who opted for remote work may have already been higher performers or uniquely suited to independent work.\n• Negation Test on Choice B: If the voluntary remote workers were already more productive than the office group, then forcing the office group to work remotely would not necessarily raise productivity—collapsing the conclusion.\n• Choices A and D are unrelated to productivity gains, and Choice C is overly extreme."
+            },
+            {
+                groupNumber: "G2",
+                questionType: "vocabulary",
+                title: "Words in Context: Ephemeral Desert Blooms",
+                category: "Words in Context",
+                difficulty: "easy",
+                passage: "After rare spring rainfall in the Atacama Desert, thousands of dormant seeds sprout almost overnight, covering the arid hills in purple and yellow flowers. Because intense heat quickly returns and dries the topsoil, however, this vivid botanical display is notoriously ______, often fading completely within two weeks.",
+                question: "Which choice completes the text with the most logical and precise word or phrase?",
+                options: [
+                    "ephemeral",
+                    "perpetual",
+                    "ambiguous",
+                    "redundant"
+                ],
+                correctIndex: 0,
+                hint: "Pay attention to the final clause: 'often fading completely within two weeks.' You need a word that means short-lived.",
+                explanation: "Correct Answer: A\n• Context Clues: The passage states that the flowers appear overnight and fade completely within two weeks, clearly pointing to something very short-lived.\n• 'Ephemeral' means lasting for a very short time, fitting the context precisely.\n• 'Perpetual' (never-ending) is the exact opposite; 'ambiguous' (unclear) and 'redundant' (unnecessarily repetitive) do not fit the timing context."
+            },
+            {
+                groupNumber: "G2",
+                questionType: "vocabulary",
+                title: "Words in Context: Corroborating Historical Accounts",
+                category: "Words in Context",
+                difficulty: "medium",
+                passage: "For decades, historians questioned whether nineteenth-century traveler Isabella Bird had exaggerated the severity of the mountain blizzards she described in her letters. Recently, however, tree-ring climate data and regional weather logs from the same winter have ______ her vivid descriptions, confirming that temperatures dropped to historic lows.",
+                question: "Which choice completes the text with the most logical and precise word or phrase?",
+                options: [
+                    "undermined",
+                    "corroborated",
+                    "obscured",
+                    "fabricated"
+                ],
+                correctIndex: 1,
+                hint: "Notice the contrast word 'however' and the phrase 'confirming that temperatures dropped to historic lows.' We need a verb meaning 'confirmed or supported with evidence.'",
+                explanation: "Correct Answer: B\n• Context Clues: Historians previously doubted Isabella Bird's letters, 'however' new scientific data confirms her descriptions.\n• 'Corroborated' means confirmed or gave independent support to a statement or theory.\n• 'Undermined' (weakened), 'obscured' (made unclear), and 'fabricated' (invented falsely) all contradict the confirming evidence."
+            },
+            {
+                groupNumber: "G2",
+                questionType: "grammar",
+                title: "Sentence Boundaries: Semicolon & Independent Clauses",
+                category: "Boundaries",
+                difficulty: "medium",
+                passage: "Bioluminescent fungi emit a soft green glow through a chemical reaction involving the compound ______ scientists are still debating whether this glow evolved primarily to attract nocturnal insects that disperse spores.",
+                question: "Which choice completes the text so that it conforms to the conventions of Standard English?",
+                options: [
+                    "luciferin,",
+                    "luciferin;",
+                    "luciferin",
+                    "luciferin, and while"
+                ],
+                correctIndex: 1,
+                hint: "Check both sides of the blank: 'Bioluminescent fungi emit...' is a complete independent clause, and 'scientists are still debating...' is also a complete independent clause.",
+                explanation: "Correct Answer: B\n• Grammar Rule: Two complete independent clauses cannot be joined by a comma alone (comma splice, Choice A) or with no punctuation at all (run-on sentence, Choice C).\n• Choice B correctly uses a semicolon to link two closely related independent clauses.\n• Choice D ('and while') turns the second clause into a fragment without a main clause to complete it."
+            }
+        ];
+
+        const ENGLISH_SEED_BY_PASSAGE = new Map(
+            SEED_QUESTIONS.map((q) => [q.passage.slice(0, 60), q])
+        );
+
+        function normalizeQuestion(q) {
+            const match = q?.passage ? ENGLISH_SEED_BY_PASSAGE.get(q.passage.slice(0, 60)) : null;
+            const inferredType = q?.questionType || match?.questionType || "logic";
+            const inferredGroup = q?.groupNumber !== undefined && q?.groupNumber !== null
+                ? String(q.groupNumber).trim()
+                : (match?.groupNumber || "");
+            if (!match) {
+                return { ...q, questionType: inferredType, groupNumber: inferredGroup };
+            }
+            return {
+                ...q,
+                questionType: inferredType,
+                groupNumber: inferredGroup,
+                title: match.title,
+                hint: match.hint,
+                explanation: match.explanation
+            };
+        }
+
+        // =====================================================================
+        // 2. CORE STATE, STORAGE HELPERS & UI UTILITIES
+        // =====================================================================
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let useCloudDb = false;
+        const appId = typeof __app_id !== "undefined" ? __app_id : "sat-logic-tutor-app";
+
+        const state = {
+            adminTab: "strategy",
+            questions: [],
+            attempts: [],
+            config: { ...DEFAULT_CONFIG },
+            localAudioIds: new Set(),
+            selectedBankQuestionIds: new Set(),
+            currentFilteredBankIds: [],
+            selectedAttemptIds: new Set(),
+            currentFilteredAttemptIds: []
+        };
+
+        function readLS(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch {
+                return fallback;
+            }
+        }
+
+        function writeLS(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (err) {
+                console.warn("LocalStorage write failed:", err);
+            }
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toast-container");
+            if (!container) return;
+            const toast = document.createElement("div");
+            const palette = type === "success"
+                ? "bg-emerald-600 text-white"
+                : type === "error"
+                    ? "bg-rose-600 text-white"
+                    : "bg-slate-900 text-white";
+            toast.className = `${palette} px-4 py-2.5 rounded-xl shadow-lg text-xs sm:text-sm font-medium fade-in pointer-events-auto`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transition = "opacity 0.25s ease";
+                setTimeout(() => toast.remove(), 260);
+            }, 3400);
+        }
+
+        function openConfirmModal(title, message, onConfirm) {
+            const modal = document.getElementById("confirm-modal");
+            document.getElementById("confirm-title").textContent = title;
+            document.getElementById("confirm-message").textContent = message;
+            modal.classList.remove("hidden");
+
+            const okBtn = document.getElementById("confirm-ok-btn");
+            const cancelBtn = document.getElementById("confirm-cancel-btn");
+            const cleanup = () => {
+                modal.classList.add("hidden");
+                okBtn.onclick = null;
+                cancelBtn.onclick = null;
+            };
+            cancelBtn.onclick = cleanup;
+            okBtn.onclick = async () => {
+                cleanup();
+                await onConfirm();
+            };
+        }
+
+        function setDbStatus(isCloud, text) {
+            const dot = document.getElementById("db-status-dot");
+            const label = document.getElementById("db-status-text");
+            if (dot) {
+                dot.className = `w-2 h-2 rounded-full ${isCloud ? "bg-emerald-500" : "bg-indigo-500"}`;
+            }
+            if (label) label.textContent = text;
+        }
+
+        function getQuestionTypes() {
+            const list = state.config?.questionTypes;
+            return Array.isArray(list) && list.length > 0 ? list : DEFAULT_QUESTION_TYPES;
+        }
+
+        function getTypeMeta(typeId) {
+            const found = getQuestionTypes().find((t) => t.id === typeId);
+            return found || {
+                id: typeId || "logic",
+                name: typeId || "Logic",
+                labelZh: `${typeId || "Logic"}`,
+                color: "indigo",
+                categories: []
+            };
+        }
+
+        function getAllCategories(limitTypeIds = null) {
+            const set = new Set();
+            const types = getQuestionTypes();
+            const allowed = Array.isArray(limitTypeIds) && limitTypeIds.length > 0 ? new Set(limitTypeIds) : null;
+            types.forEach((t) => {
+                if (!allowed || allowed.has(t.id)) {
+                    (t.categories || []).forEach((c) => set.add(c));
+                }
+            });
+            state.questions.forEach((q) => {
+                if (q.category && (!allowed || allowed.has(q.questionType || "logic"))) {
+                    set.add(q.category);
+                }
+            });
+            return [...set];
+        }
+
+        function getAllGroupNumbers() {
+            const set = new Set();
+            state.questions.forEach((q) => {
+                const g = String(q.groupNumber || "").trim();
+                if (g) set.add(g);
+            });
+            return [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+        }
+
+        function downloadJsonFile(dataObj, filename) {
+            const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: "application/json;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function copyTextFallback(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(() => {
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    ta.remove();
+                });
+            } else {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                ta.remove();
+            }
+        }
+
+        // =====================================================================
+        // 3. SHARED INDEXEDDB AUDIO STORAGE & GOOGLE CLOUD ENGLISH TTS
+        // =====================================================================
+        let activePreviewAudio = null;
+        let activePreviewUrl = null;
+        let activePreviewQuestionId = null;
+        let activePreviewButton = null;
+        let activeTestAudio = null;
+        let activeTestUrl = null;
+        let activeTestConfigSignature = "";
+        let currentBankTypeFilter = "all";
+
+        function base64ToUint8Array(base64) {
+            const cleaned = String(base64 || "")
+                .replace(/^data:audio\/[^;]+;base64,/i, "")
+                .replace(/\s+/g, "");
+            const bin = atob(cleaned);
+            const len = bin.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+        }
+
+        function prepareSpeechText(rawText) {
+            return String(rawText || "")
+                .replace(/Correct Answer:\s*([A-D])/gi, "The correct answer is choice $1.")
+                .replace(/[•▪◦]/g, " ")
+                .replace(/\s*\n+\s*/g, ". ")
+                .replace(/\.\s*\./g, ".")
+                .replace(/\s{2,}/g, " ")
+                .trim();
+        }
+
+        function stopStoredPreviewAudio() {
+            if (activePreviewAudio) {
+                activePreviewAudio.pause();
+                activePreviewAudio.onended = null;
+                activePreviewAudio.onerror = null;
+                activePreviewAudio = null;
+            }
+            if (activePreviewUrl) {
+                URL.revokeObjectURL(activePreviewUrl);
+                activePreviewUrl = null;
+            }
+            if (activePreviewButton) {
+                activePreviewButton.textContent = "▶️ 试听语音";
+                activePreviewButton = null;
+            }
+            activePreviewQuestionId = null;
+        }
+
+        function stopTestPreviewAudio() {
+            if (activeTestAudio) {
+                activeTestAudio.pause();
+                activeTestAudio.onended = null;
+                activeTestAudio.onerror = null;
+                activeTestAudio = null;
+            }
+            if (activeTestUrl) {
+                URL.revokeObjectURL(activeTestUrl);
+                activeTestUrl = null;
+            }
+            activeTestConfigSignature = "";
+            const testBtn = document.getElementById("btn-test-gcloud-voice");
+            if (testBtn && !testBtn.disabled) {
+                testBtn.textContent = "🔊 测试语音";
+            }
+        }
+
+        function openAudioIdb() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(AUDIO_IDB_NAME, 1);
+                req.onupgradeneeded = () => {
+                    const idb = req.result;
+                    if (!idb.objectStoreNames.contains(AUDIO_IDB_STORE)) {
+                        idb.createObjectStore(AUDIO_IDB_STORE, { keyPath: "questionId" });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbPutAudio(record) {
+            const idb = await openAudioIdb();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(AUDIO_IDB_STORE, "readwrite");
+                tx.objectStore(AUDIO_IDB_STORE).put(record);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbGetAudio(questionId) {
+            const idb = await openAudioIdb();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(AUDIO_IDB_STORE, "readonly");
+                const req = tx.objectStore(AUDIO_IDB_STORE).get(questionId);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbDeleteAudio(questionId) {
+            const idb = await openAudioIdb();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(AUDIO_IDB_STORE, "readwrite");
+                tx.objectStore(AUDIO_IDB_STORE).delete(questionId);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbGetAllAudioKeys() {
+            const idb = await openAudioIdb();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(AUDIO_IDB_STORE, "readonly");
+                const req = tx.objectStore(AUDIO_IDB_STORE).getAllKeys();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function getGcloudTtsConfig() {
+            const saved = readLS(LS_KEYS.GCLOUD_TTS_CONFIG, null);
+            return {
+                ...DEFAULT_GCLOUD_TTS_CONFIG,
+                ...(saved && typeof saved === "object" ? saved : {})
+            };
+        }
+
+        function renderGcloudVoiceOptions(tier, selectedVoiceName) {
+            const voiceSel = document.getElementById("gc-voice-select");
+            if (!voiceSel) return;
+
+            const cachedAll = readLS(LS_KEYS.GCLOUD_TTS_VOICES_CACHE, null);
+            let list = [];
+            if (Array.isArray(cachedAll) && cachedAll.length > 0) {
+                const token = `-${tier}-`;
+                list = cachedAll
+                    .filter((v) => v.name && v.name.includes(token))
+                    .map((v) => ({
+                        name: v.name,
+                        label: `${v.name.replace("en-US-", "")}（${v.ssmlGender === "FEMALE" ? "女声" : v.ssmlGender === "MALE" ? "男声" : "中性"}）`
+                    }));
+            }
+            if (list.length === 0) {
+                list = DEFAULT_GCLOUD_VOICES[tier] || DEFAULT_GCLOUD_VOICES["Chirp3-HD"];
+            }
+
+            voiceSel.innerHTML = "";
+            list.forEach((v) => {
+                const opt = document.createElement("option");
+                opt.value = v.name;
+                opt.textContent = v.label || v.name;
+                voiceSel.appendChild(opt);
+            });
+
+            if (selectedVoiceName && [...voiceSel.options].some((o) => o.value === selectedVoiceName)) {
+                voiceSel.value = selectedVoiceName;
+            } else if (voiceSel.options.length > 0) {
+                voiceSel.selectedIndex = 0;
+            }
+        }
+
+        async function fetchGcloudEnUsVoices(apiKey) {
+            const key = (apiKey || "").trim();
+            if (!key) throw new Error("请先填写 Google Cloud API Key");
+
+            const endpoint = `https://texttospeech.googleapis.com/v1/voices?languageCode=en-US&key=${encodeURIComponent(key)}`;
+            const res = await fetch(endpoint, { method: "GET" });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                const msg = errData?.error?.message || `HTTP ${res.status}`;
+                throw new Error(`拉取人声失败：${msg}`);
+            }
+            const data = await res.json();
+            const voices = Array.isArray(data?.voices)
+                ? data.voices
+                    .filter((v) => v?.name && v.name.startsWith("en-US-"))
+                    .map((v) => ({ name: v.name, ssmlGender: v.ssmlGender || "NEUTRAL" }))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                : [];
+
+            if (voices.length === 0) {
+                throw new Error("未获取到可用的 en-US 人声列表");
+            }
+            writeLS(LS_KEYS.GCLOUD_TTS_VOICES_CACHE, voices);
+            return voices;
+        }
+
+        async function synthesizeEnglishAudioBase64(rawText) {
+            const cfg = getGcloudTtsConfig();
+            const apiKey = (cfg.apiKey || "").trim();
+            if (!apiKey) {
+                throw new Error("请先点击右上角「🎙️ Google Cloud 语音配置」填写 API Key");
+            }
+
+            const englishText = prepareSpeechText(rawText);
+            if (!englishText) {
+                throw new Error("解析文本为空，无法生成语音");
+            }
+
+            const voiceName = cfg.voiceName || DEFAULT_GCLOUD_TTS_CONFIG.voiceName;
+            const speakingRate = Number(cfg.speakingRate) || 1;
+            const audioConfig = { audioEncoding: "MP3" };
+            if (speakingRate !== 1) {
+                audioConfig.speakingRate = speakingRate;
+            }
+
+            const endpoint = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(apiKey)}`;
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    input: { text: englishText },
+                    voice: {
+                        languageCode: "en-US",
+                        name: voiceName
+                    },
+                    audioConfig
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                const msg = errData?.error?.message || `HTTP ${res.status}`;
+                const err = new Error(`Google Cloud TTS 请求失败 (${res.status})：${msg}`);
+                err.status = res.status;
+                throw err;
+            }
+
+            const data = await res.json();
+            if (!data?.audioContent) {
+                throw new Error("Google Cloud TTS 未返回有效音频数据");
+            }
+
+            return {
+                audioBase64: data.audioContent,
+                mimeType: "audio/mpeg",
+                englishText,
+                voiceName
+            };
+        }
+
+        async function generateAndStoreAudioForQuestion(questionId, explanationText) {
+            const audioPayload = await synthesizeEnglishAudioBase64(explanationText);
+            const record = {
+                questionId,
+                audioBase64: audioPayload.audioBase64,
+                mimeType: audioPayload.mimeType,
+                englishText: audioPayload.englishText,
+                voiceName: audioPayload.voiceName,
+                updatedAt: Date.now()
+            };
+
+            try {
+                await idbPutAudio(record);
+                state.localAudioIds.add(questionId);
+            } catch (err) {
+                console.warn("IndexedDB audio save failed:", err);
+            }
+
+            if (useCloudDb && currentUser) {
+                await setDoc(getQuestionAudioDoc(questionId), record);
+                await setDoc(
+                    doc(db, "artifacts", appId, "public", "data", "sat_questions", questionId),
+                    { hasAudio: true, audioUpdatedAt: record.updatedAt },
+                    { merge: true }
+                );
+            } else {
+                const idx = state.questions.findIndex((q) => q.id === questionId);
+                if (idx >= 0) {
+                    state.questions[idx] = {
+                        ...state.questions[idx],
+                        hasAudio: true,
+                        audioUpdatedAt: record.updatedAt
+                    };
+                    writeLS(LS_KEYS.QUESTIONS, state.questions);
+                }
+            }
+
+            return record;
+        }
+
+        async function previewStoredAudio(questionId, btnEl = null) {
+            // 同一道题再次点击：切换暂停 / 继续播放
+            if (activePreviewAudio && activePreviewQuestionId === questionId) {
+                activePreviewButton = btnEl || activePreviewButton;
+                if (!activePreviewAudio.paused) {
+                    activePreviewAudio.pause();
+                    if (activePreviewButton) activePreviewButton.textContent = "▶️ 继续播放";
+                } else {
+                    try {
+                        await activePreviewAudio.play();
+                        if (activePreviewButton) activePreviewButton.textContent = "⏸️ 暂停试听";
+                    } catch (err) {
+                        showToast("继续播放失败：" + err.message, "error");
+                    }
+                }
+                return;
+            }
+
+            stopStoredPreviewAudio();
+            stopTestPreviewAudio();
+
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = "⏳ 加载中...";
+            }
+
+            let record = null;
+            if (useCloudDb && currentUser) {
+                try {
+                    const snap = await getDoc(getQuestionAudioDoc(questionId));
+                    if (snap.exists()) record = snap.data();
+                } catch (err) {
+                    console.warn("Cloud audio preview fetch failed:", err);
+                }
+            }
+            if (!record) {
+                try {
+                    record = await idbGetAudio(questionId);
+                } catch {
+                    record = null;
+                }
+            }
+
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = "▶️ 试听语音";
+            }
+
+            if (!record || !record.audioBase64) {
+                showToast("未找到该题已入库的语音，请先点击生成语音。", "error");
+                return;
+            }
+
+            try {
+                const bytes = base64ToUint8Array(record.audioBase64);
+                const blob = new Blob([bytes], { type: record.mimeType || "audio/mpeg" });
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+
+                activePreviewAudio = audio;
+                activePreviewUrl = url;
+                activePreviewQuestionId = questionId;
+                activePreviewButton = btnEl;
+
+                audio.onended = () => {
+                    stopStoredPreviewAudio();
+                };
+                audio.onerror = () => {
+                    stopStoredPreviewAudio();
+                    showToast("语音播放出错，请尝试重制语音。", "error");
+                };
+
+                await audio.play();
+                if (activePreviewButton) activePreviewButton.textContent = "⏸️ 暂停试听";
+            } catch (err) {
+                stopStoredPreviewAudio();
+                showToast("试听失败：" + err.message, "error");
+            }
+        }
+
+        // =====================================================================
+        // 4. DATABASE INITIALIZATION & SYNC (Firebase + Local Fallback)
+        // =====================================================================
+        function resolveFirebaseConfig() {
+            const saved = readLS(LS_KEYS.FIREBASE_CONFIG, null);
+            if (saved && saved.apiKey && saved.projectId) {
+                return { config: saved, source: "custom-ls" };
+            }
+            if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.apiKey && CUSTOM_FIREBASE_CONFIG.projectId) {
+                return { config: CUSTOM_FIREBASE_CONFIG, source: "built-in" };
+            }
+            return { config: null, source: "none" };
+        }
+
+        function getQuestionsCol() {
+            return collection(db, "artifacts", appId, "public", "data", "sat_questions");
+        }
+        function getQuestionAudioDoc(questionId) {
+            return doc(db, "artifacts", appId, "public", "data", "sat_question_audio", questionId);
+        }
+        function getAttemptsCol() {
+            return collection(db, "artifacts", appId, "public", "data", "student_attempts");
+        }
+        function getConfigDoc() {
+            return doc(db, "artifacts", appId, "public", "data", "tutor_settings", "strategy_config");
+        }
+
+        async function initDatabase() {
+            try {
+                const keys = await idbGetAllAudioKeys();
+                state.localAudioIds = new Set(keys);
+            } catch (err) {
+                console.warn("IndexedDB audio keys read failed:", err);
+            }
+
+            try {
+                const { config: firebaseConfig, source } = resolveFirebaseConfig();
+                if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.projectId) {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    if (source === "env" && typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+                        try {
+                            const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                            currentUser = cred.user;
+                        } catch {
+                            const cred = await signInAnonymously(auth);
+                            currentUser = cred.user;
+                        }
+                    } else {
+                        const cred = await signInAnonymously(auth);
+                        currentUser = cred.user;
+                    }
+
+                    if (!currentUser) throw new Error("Firebase 匿名登录失败");
+
+                    useCloudDb = true;
+                    setDbStatus(true, `云端数据库已连接 (${firebaseConfig.projectId})`);
+                    await seedCloudIfEmpty();
+                    subscribeCloudData();
+                    return;
+                }
+            } catch (err) {
+                console.warn("Firebase 连接失败，切换至本地模式:", err);
+            }
+
+            useCloudDb = false;
+            currentUser = { uid: "admin-local" };
+            setDbStatus(false, "本地浏览器数据库模式（与同浏览器前台共享）");
+            loadFromLocalSharedDb();
+        }
+
+        async function seedCloudIfEmpty() {
+            const snap = await getDocs(getQuestionsCol());
+            if (snap.empty) {
+                const now = Date.now();
+                for (let i = 0; i < SEED_QUESTIONS.length; i++) {
+                    await addDoc(getQuestionsCol(), {
+                        ...SEED_QUESTIONS[i],
+                        hasAudio: false,
+                        createdAt: now - (SEED_QUESTIONS.length - i) * 1000
+                    });
+                }
+            }
+        }
+
+        function loadFromLocalSharedDb() {
+            let storedQuestions = readLS(LS_KEYS.QUESTIONS, null);
+            if (!Array.isArray(storedQuestions) || storedQuestions.length === 0) {
+                storedQuestions = SEED_QUESTIONS.map((q, idx) => ({
+                    ...q,
+                    id: "q_seed_" + (idx + 1),
+                    hasAudio: false,
+                    createdAt: Date.now() - (SEED_QUESTIONS.length - idx) * 1000
+                }));
+                writeLS(LS_KEYS.QUESTIONS, storedQuestions);
+            }
+            state.questions = storedQuestions.map(normalizeQuestion);
+
+            const storedConfig = readLS(LS_KEYS.CONFIG, null);
+            state.config = storedConfig
+                ? {
+                    ...DEFAULT_CONFIG,
+                    ...storedConfig,
+                    focusGroup: storedConfig.focusGroup ? String(storedConfig.focusGroup).trim() : "",
+                    focusTypes: Array.isArray(storedConfig.focusTypes) ? storedConfig.focusTypes : [],
+                    focusCategories: Array.isArray(storedConfig.focusCategories) ? storedConfig.focusCategories : [],
+                    questionOpenQuota: storedConfig.questionOpenQuota && typeof storedConfig.questionOpenQuota === "object"
+                        ? { ...storedConfig.questionOpenQuota }
+                        : {},
+                    questionTypes: Array.isArray(storedConfig.questionTypes) && storedConfig.questionTypes.length > 0
+                        ? storedConfig.questionTypes
+                        : DEFAULT_QUESTION_TYPES.map((t) => ({ ...t, categories: [...t.categories] }))
+                }
+                : { ...DEFAULT_CONFIG, questionTypes: DEFAULT_QUESTION_TYPES.map((t) => ({ ...t, categories: [...t.categories] })) };
+
+            const storedAttempts = readLS(LS_KEYS.ATTEMPTS, []);
+            state.attempts = Array.isArray(storedAttempts) ? storedAttempts : [];
+
+            renderAllAdminViews();
+        }
+
+        function subscribeCloudData() {
+            onSnapshot(getQuestionsCol(), (snap) => {
+                const list = [];
+                snap.forEach((d) => list.push(normalizeQuestion({ id: d.id, ...d.data() })));
+                list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                state.questions = list;
+                renderAllAdminViews();
+            });
+
+            onSnapshot(getConfigDoc(), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.config = {
+                        strategy: data.strategy || "adaptive",
+                        allowHints: data.allowHints !== false,
+                        autoAdvanceThreshold: Number(data.autoAdvanceThreshold) || 2,
+                        focusGroup: data.focusGroup ? String(data.focusGroup).trim() : "",
+                        focusTypes: Array.isArray(data.focusTypes) ? data.focusTypes : [],
+                        focusCategories: Array.isArray(data.focusCategories) ? data.focusCategories : [],
+                        questionOpenQuota: data.questionOpenQuota && typeof data.questionOpenQuota === "object"
+                            ? { ...data.questionOpenQuota }
+                            : {},
+                        questionTypes: Array.isArray(data.questionTypes) && data.questionTypes.length > 0
+                            ? data.questionTypes
+                            : DEFAULT_QUESTION_TYPES.map((t) => ({ ...t, categories: [...t.categories] }))
+                    };
+                }
+                renderAllAdminViews();
+            });
+
+            onSnapshot(getAttemptsCol(), (snap) => {
+                const list = [];
+                snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                state.attempts = list;
+                renderAdminAnalytics();
+            });
+        }
+
+        async function saveConfigToDb(newConfig) {
+            state.config = { ...newConfig };
+            if (useCloudDb && currentUser) {
+                await setDoc(getConfigDoc(), state.config);
+            } else {
+                writeLS(LS_KEYS.CONFIG, state.config);
+            }
+        }
+
+        function renderAllAdminViews() {
+            document.getElementById("admin-bank-count").textContent = String(state.questions.length);
+            document.getElementById("admin-types-count").textContent = String(getQuestionTypes().length);
+            renderStrategyForm();
+            renderQuestionBank();
+            renderTypesManager();
+            renderAdminAnalytics();
+        }
+
+        // =====================================================================
+        // 5. TAB NAVIGATION
+        // =====================================================================
+        function switchAdminTab(tabName) {
+            state.adminTab = tabName;
+            ["strategy", "bank", "types", "analytics"].forEach((t) => {
+                const section = document.getElementById(`admin-tab-${t}`);
+                if (section) section.classList.toggle("hidden", t !== tabName);
+            });
+            document.querySelectorAll(".admin-tab-btn").forEach((btn) => {
+                const active = btn.dataset.adminTab === tabName;
+                btn.className = active
+                    ? "admin-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 text-white shadow-xs transition-all cursor-pointer"
+                    : "admin-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer";
+            });
+        }
+
+        document.querySelectorAll(".admin-tab-btn").forEach((btn) => {
+            btn.addEventListener("click", () => switchAdminTab(btn.dataset.adminTab));
+        });
+
+        // =====================================================================
+        // 6. TAB 1: STRATEGY & GROUP SCOPE CONFIGURATION
+        // =====================================================================
+        function getAttemptCountMap() {
+            const map = new Map();
+            state.attempts.forEach((a) => {
+                if (a.questionId) {
+                    map.set(a.questionId, (map.get(a.questionId) || 0) + 1);
+                }
+            });
+            return map;
+        }
+
+        function getQuestionsMatchingScope(focusGroup, focusTypes, focusCategories) {
+            let pool = [...state.questions];
+            if (pool.length === 0) return [];
+
+            const gTarget = String(focusGroup || "").trim();
+            if (gTarget) {
+                const byGroup = pool.filter((q) => String(q.groupNumber || "").trim() === gTarget);
+                if (byGroup.length > 0) pool = byGroup;
+            }
+            if (Array.isArray(focusTypes) && focusTypes.length > 0) {
+                const typeSet = new Set(focusTypes);
+                const byType = pool.filter((q) => typeSet.has(q.questionType || "logic"));
+                if (byType.length > 0) pool = byType;
+            }
+            if (Array.isArray(focusCategories) && focusCategories.length > 0) {
+                const catSet = new Set(focusCategories);
+                const byCat = pool.filter((q) => catSet.has(q.category));
+                if (byCat.length > 0) pool = byCat;
+            }
+            return pool;
+        }
+
+        function openReopenConfirmModal(firstTimeItems, repeatItems, onConfirmReopen, onConfirmOnlyNew) {
+            const modal = document.getElementById("reopen-confirm-modal");
+            const totalCount = firstTimeItems.length + repeatItems.length;
+            document.getElementById("reopen-summary-text").textContent =
+                `当前开放范围共 ${totalCount} 道题：其中 ${firstTimeItems.length} 道为第一次练习，${repeatItems.length} 道此前已被学生练习过。`;
+            document.getElementById("reopen-repeat-count").textContent = `${repeatItems.length} 题`;
+            document.getElementById("reopen-first-count").textContent = `${firstTimeItems.length} 题`;
+
+            const repeatEl = document.getElementById("reopen-repeat-list");
+            repeatEl.innerHTML = "";
+            repeatItems.forEach(({ q, doneCount }) => {
+                const gLabel = String(q.groupNumber || "").trim();
+                const row = document.createElement("div");
+                row.className = "flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-rose-50/70 border border-rose-200/80 text-xs";
+                row.innerHTML = `
+                    <div class="min-w-0 flex items-center gap-1.5">
+                        ${gLabel ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px] font-bold flex-shrink-0">${gLabel}</span>` : ""}
+                        <span class="font-semibold text-slate-800 truncate item-title"></span>
+                        <span class="text-slate-400 flex-shrink-0">(${q.category || "General"})</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[11px] flex-shrink-0">非第一次 · 已做 ${doneCount} 次</span>
+                `;
+                row.querySelector(".item-title").textContent = q.title || q.id;
+                repeatEl.appendChild(row);
+            });
+
+            const firstEl = document.getElementById("reopen-first-list");
+            firstEl.innerHTML = "";
+            if (firstTimeItems.length === 0) {
+                firstEl.innerHTML = `<p class="text-xs text-slate-400 py-2">无第一次练习的新题（当前范围全部为已做过的题目）</p>`;
+            } else {
+                firstTimeItems.forEach(({ q }) => {
+                    const gLabel = String(q.groupNumber || "").trim();
+                    const row = document.createElement("div");
+                    row.className = "flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-emerald-50/60 border border-emerald-200/80 text-xs";
+                    row.innerHTML = `
+                        <div class="min-w-0 flex items-center gap-1.5">
+                            ${gLabel ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px] font-bold flex-shrink-0">${gLabel}</span>` : ""}
+                            <span class="font-semibold text-slate-800 truncate item-title"></span>
+                            <span class="text-slate-400 flex-shrink-0">(${q.category || "General"})</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[11px] flex-shrink-0">第一次</span>
+                    `;
+                    row.querySelector(".item-title").textContent = q.title || q.id;
+                    firstEl.appendChild(row);
+                });
+            }
+
+            modal.classList.remove("hidden");
+
+            const confirmBtn = document.getElementById("btn-confirm-reopen");
+            const onlyNewBtn = document.getElementById("btn-save-only-new");
+            const cancelBtn = document.getElementById("btn-cancel-reopen");
+            const closeBtn = document.getElementById("close-reopen-modal");
+            const cleanup = () => {
+                modal.classList.add("hidden");
+                confirmBtn.onclick = null;
+                onlyNewBtn.onclick = null;
+                cancelBtn.onclick = null;
+                closeBtn.onclick = null;
+            };
+            cancelBtn.onclick = cleanup;
+            closeBtn.onclick = cleanup;
+            confirmBtn.onclick = async () => {
+                cleanup();
+                await onConfirmReopen();
+            };
+            onlyNewBtn.onclick = async () => {
+                cleanup();
+                if (typeof onConfirmOnlyNew === "function") {
+                    await onConfirmOnlyNew();
+                }
+            };
+        }
+
+        function renderStrategyForm() {
+            document.getElementById("cfg-strategy").value = state.config.strategy || "adaptive";
+            document.getElementById("cfg-threshold").value = String(state.config.autoAdvanceThreshold || 2);
+            document.getElementById("cfg-allow-hints").checked = state.config.allowHints !== false;
+
+            const groupSelect = document.getElementById("cfg-focus-group");
+            const groups = getAllGroupNumbers();
+            groupSelect.innerHTML = `<option value="">全部组号（不限制）</option>`;
+            groups.forEach((g) => {
+                const count = state.questions.filter((q) => String(q.groupNumber || "").trim() === g).length;
+                const opt = document.createElement("option");
+                opt.value = g;
+                opt.textContent = `仅开放组号 ${g}（共 ${count} 题）`;
+                groupSelect.appendChild(opt);
+            });
+            const currentFocusGroup = String(state.config.focusGroup || "").trim();
+            if (currentFocusGroup && !groups.includes(currentFocusGroup)) {
+                const opt = document.createElement("option");
+                opt.value = currentFocusGroup;
+                opt.textContent = `仅开放组号 ${currentFocusGroup}（当前无题）`;
+                groupSelect.appendChild(opt);
+            }
+            groupSelect.value = currentFocusGroup;
+
+            const typesContainer = document.getElementById("cfg-focus-types");
+            const selectedTypes = new Set(state.config.focusTypes || []);
+            typesContainer.innerHTML = "";
+            getQuestionTypes().forEach((t) => {
+                const label = document.createElement("label");
+                label.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer hover:border-indigo-300";
+                label.innerHTML = `
+                    <input type="checkbox" value="${t.id}" class="cfg-type-cb w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer" ${selectedTypes.has(t.id) ? "checked" : ""} />
+                    <span>${t.labelZh}</span>
+                `;
+                typesContainer.appendChild(label);
+            });
+
+            const catsContainer = document.getElementById("cfg-focus-categories");
+            const selectedCats = new Set(state.config.focusCategories || []);
+            catsContainer.innerHTML = "";
+            getAllCategories().forEach((cat) => {
+                const label = document.createElement("label");
+                label.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700 cursor-pointer hover:border-indigo-300";
+                label.innerHTML = `
+                    <input type="checkbox" value="${cat}" class="cfg-cat-cb w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer" ${selectedCats.has(cat) ? "checked" : ""} />
+                    <span>${cat}</span>
+                `;
+                catsContainer.appendChild(label);
+            });
+        }
+
+        document.getElementById("btn-save-config").addEventListener("click", async () => {
+            try {
+                const focusTypes = [...document.querySelectorAll(".cfg-type-cb:checked")].map((el) => el.value);
+                const focusCategories = [...document.querySelectorAll(".cfg-cat-cb:checked")].map((el) => el.value);
+                const focusGroup = document.getElementById("cfg-focus-group").value.trim();
+
+                const baseUpdated = {
+                    ...state.config,
+                    strategy: document.getElementById("cfg-strategy").value,
+                    autoAdvanceThreshold: Math.max(1, Number(document.getElementById("cfg-threshold").value) || 2),
+                    allowHints: document.getElementById("cfg-allow-hints").checked,
+                    focusGroup,
+                    focusTypes,
+                    focusCategories
+                };
+
+                const matchedQuestions = getQuestionsMatchingScope(focusGroup, focusTypes, focusCategories);
+                const countMap = getAttemptCountMap();
+                const firstTimeItems = [];
+                const repeatItems = [];
+
+                matchedQuestions.forEach((q) => {
+                    const doneCount = countMap.get(q.id) || 0;
+                    if (doneCount > 0) repeatItems.push({ q, doneCount });
+                    else firstTimeItems.push({ q, doneCount: 0 });
+                });
+
+                const buildQuota = (allowRepeat) => {
+                    const nextQuota = { ...(state.config.questionOpenQuota || {}) };
+                    firstTimeItems.forEach(({ q }) => {
+                        delete nextQuota[q.id];
+                    });
+                    if (allowRepeat) {
+                        repeatItems.forEach(({ q, doneCount }) => {
+                            nextQuota[q.id] = doneCount + 1;
+                        });
+                    } else {
+                        repeatItems.forEach(({ q }) => {
+                            delete nextQuota[q.id];
+                        });
+                    }
+                    return nextQuota;
+                };
+
+                if (repeatItems.length > 0) {
+                    openReopenConfirmModal(
+                        firstTimeItems,
+                        repeatItems,
+                        async () => {
+                            try {
+                                await saveConfigToDb({
+                                    ...baseUpdated,
+                                    questionOpenQuota: buildQuota(true)
+                                });
+                                showToast(`已确认并同步！本次开放 ${firstTimeItems.length} 道新题与 ${repeatItems.length} 道重开题。`, "success");
+                            } catch (err) {
+                                showToast("保存失败：" + err.message, "error");
+                            }
+                        },
+                        async () => {
+                            try {
+                                await saveConfigToDb({
+                                    ...baseUpdated,
+                                    questionOpenQuota: buildQuota(false)
+                                });
+                                showToast(`已保存并同步！仅开放 ${firstTimeItems.length} 道未做新题，已跳过 ${repeatItems.length} 道已做题目。`, "success");
+                            } catch (err) {
+                                showToast("保存失败：" + err.message, "error");
+                            }
+                        }
+                    );
+                } else {
+                    await saveConfigToDb({
+                        ...baseUpdated,
+                        questionOpenQuota: buildQuota(false)
+                    });
+                    showToast(`选题策略已保存并同步到前台！（当前范围共 ${firstTimeItems.length} 题，均为第一次开放）`, "success");
+                }
+            } catch (err) {
+                showToast("保存失败：" + err.message, "error");
+            }
+        });
+
+        // =====================================================================
+        // 7. TAB 2: QUESTION BANK, BATCH DELETE, JSON IMPORT/EXPORT & AUDIO
+        // =====================================================================
+        function syncBankSelectionUI() {
+            const visibleIds = state.currentFilteredBankIds || [];
+            const selectedVisible = visibleIds.filter((id) => state.selectedBankQuestionIds.has(id)).length;
+            const totalSelected = state.selectedBankQuestionIds.size;
+
+            document.getElementById("bank-selected-count").textContent = `已选 ${totalSelected} 题`;
+            document.getElementById("btn-batch-delete-questions").disabled = totalSelected === 0;
+            document.getElementById("btn-clear-bank-selection").classList.toggle("hidden", totalSelected === 0);
+
+            const selectAllCb = document.getElementById("bank-select-all");
+            selectAllCb.checked = visibleIds.length > 0 && selectedVisible === visibleIds.length;
+            selectAllCb.indeterminate = selectedVisible > 0 && selectedVisible < visibleIds.length;
+        }
+
+        function renderQuestionBank() {
+            const pillsEl = document.getElementById("bank-type-pills");
+            pillsEl.innerHTML = "";
+            const allPill = document.createElement("button");
+            allPill.type = "button";
+            allPill.className = currentBankTypeFilter === "all"
+                ? "px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white cursor-pointer"
+                : "px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer";
+            allPill.textContent = `全部 (${state.questions.length})`;
+            allPill.addEventListener("click", () => {
+                currentBankTypeFilter = "all";
+                renderQuestionBank();
+            });
+            pillsEl.appendChild(allPill);
+
+            getQuestionTypes().forEach((t) => {
+                const count = state.questions.filter((q) => (q.questionType || "logic") === t.id).length;
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = currentBankTypeFilter === t.id
+                    ? "px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white cursor-pointer"
+                    : "px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer";
+                btn.textContent = `${t.labelZh} (${count})`;
+                btn.addEventListener("click", () => {
+                    currentBankTypeFilter = t.id;
+                    renderQuestionBank();
+                });
+                pillsEl.appendChild(btn);
+            });
+
+            const groupSelect = document.getElementById("bank-filter-group");
+            const prevGroup = groupSelect.value || "all";
+            groupSelect.innerHTML = `<option value="all">全部组号</option><option value="__ungrouped__">未分组</option>`;
+            getAllGroupNumbers().forEach((g) => {
+                const opt = document.createElement("option");
+                opt.value = g;
+                opt.textContent = `组号 ${g}`;
+                groupSelect.appendChild(opt);
+            });
+            groupSelect.value = [...groupSelect.options].some((o) => o.value === prevGroup) ? prevGroup : "all";
+
+            const catSelect = document.getElementById("bank-filter-category");
+            const prevCat = catSelect.value || "all";
+            catSelect.innerHTML = `<option value="all">全部考点</option>`;
+            const catList = currentBankTypeFilter === "all" ? getAllCategories() : getAllCategories([currentBankTypeFilter]);
+            catList.forEach((c) => {
+                const opt = document.createElement("option");
+                opt.value = c;
+                opt.textContent = c;
+                catSelect.appendChild(opt);
+            });
+            catSelect.value = [...catSelect.options].some((o) => o.value === prevCat) ? prevCat : "all";
+
+            const keyword = (document.getElementById("bank-search-input").value || "").trim().toLowerCase();
+            const groupFilter = groupSelect.value || "all";
+            const catFilter = catSelect.value || "all";
+            const diffFilter = document.getElementById("bank-filter-difficulty").value || "all";
+
+            const validIds = new Set(state.questions.map((q) => q.id));
+            state.selectedBankQuestionIds.forEach((id) => {
+                if (!validIds.has(id)) state.selectedBankQuestionIds.delete(id);
+            });
+
+            const filtered = state.questions.filter((q) => {
+                const qType = q.questionType || "logic";
+                const gNum = String(q.groupNumber || "").trim();
+                if (currentBankTypeFilter !== "all" && qType !== currentBankTypeFilter) return false;
+                if (groupFilter === "__ungrouped__" && gNum !== "") return false;
+                if (groupFilter !== "all" && groupFilter !== "__ungrouped__" && gNum !== groupFilter) return false;
+                if (catFilter !== "all" && q.category !== catFilter) return false;
+                if (diffFilter !== "all" && q.difficulty !== diffFilter) return false;
+                if (keyword) {
+                    const hay = `${q.title || ""} ${q.passage || ""} ${q.category || ""} ${gNum} ${qType}`.toLowerCase();
+                    if (!hay.includes(keyword)) return false;
+                }
+                return true;
+            });
+
+            state.currentFilteredBankIds = filtered.map((q) => q.id);
+
+            const listEl = document.getElementById("admin-questions-list");
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200/80 p-10 text-center text-sm text-slate-400">暂无符合筛选条件的题目</div>`;
+                syncBankSelectionUI();
+                return;
+            }
+
+            const letters = ["A", "B", "C", "D"];
+            listEl.innerHTML = "";
+
+            filtered.forEach((q) => {
+                const tMeta = getTypeMeta(q.questionType || "logic");
+                const tColor = (TYPE_COLOR_STYLES[tMeta.color] || TYPE_COLOR_STYLES.indigo).badge;
+                const dMeta = DIFFICULTY_META[q.difficulty] || DIFFICULTY_META.medium;
+                const hasAudio = Boolean(q.hasAudio || state.localAudioIds.has(q.id));
+                const gLabel = String(q.groupNumber || "").trim();
+                const isChecked = state.selectedBankQuestionIds.has(q.id);
+
+                const card = document.createElement("div");
+                card.className = `bg-white rounded-2xl border p-4 shadow-xs transition-all flex items-start gap-3.5 ${
+                    isChecked ? "border-indigo-400 bg-indigo-50/20" : "border-slate-200/90 hover:border-slate-300"
+                }`;
+
+                card.innerHTML = `
+                    <input type="checkbox" class="bank-q-cb w-4 h-4 mt-1 accent-indigo-600 rounded cursor-pointer flex-shrink-0" ${isChecked ? "checked" : ""} />
+                    <div class="flex-1 min-w-0 space-y-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                ${gLabel ? `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-900 text-white">组号 ${gLabel}</span>` : ""}
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${tColor}">${tMeta.name}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">${q.category || "General"}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${dMeta.color}">${dMeta.label}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                    hasAudio ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"
+                                }">${hasAudio ? "🔊 语音已入库" : "🔇 未生成语音"}</span>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">答案：${letters[q.correctIndex] || "A"}</span>
+                        </div>
+
+                        <div class="text-sm font-bold text-slate-900 q-card-title"></div>
+                        <p class="text-xs text-slate-500 line-clamp-2 q-card-passage"></p>
+
+                        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                            <button type="button" class="btn-edit-q px-3 py-1 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 cursor-pointer">
+                                ✏️ 编辑
+                            </button>
+                            ${hasAudio ? `
+                                <button type="button" class="btn-play-audio px-3 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
+                                    ▶️ 试听语音
+                                </button>
+                            ` : ""}
+                            <button type="button" class="btn-gen-audio px-3 py-1 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                                ${hasAudio ? "🔄 重制语音" : "🎙️ 生成语音"}
+                            </button>
+                            <button type="button" class="btn-del-q ml-auto px-3 py-1 rounded-lg text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                                🗑️ 删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                card.querySelector(".q-card-title").textContent = q.title || "未命名题目";
+                card.querySelector(".q-card-passage").textContent = q.passage || "";
+
+                card.querySelector(".bank-q-cb").addEventListener("change", (ev) => {
+                    if (ev.target.checked) state.selectedBankQuestionIds.add(q.id);
+                    else state.selectedBankQuestionIds.delete(q.id);
+                    card.className = `bg-white rounded-2xl border p-4 shadow-xs transition-all flex items-start gap-3.5 ${
+                        ev.target.checked ? "border-indigo-400 bg-indigo-50/20" : "border-slate-200/90 hover:border-slate-300"
+                    }`;
+                    syncBankSelectionUI();
+                });
+
+                card.querySelector(".btn-edit-q").addEventListener("click", () => openQuestionModal(q));
+
+                const playBtn = card.querySelector(".btn-play-audio");
+                if (playBtn) {
+                    if (activePreviewAudio && activePreviewQuestionId === q.id) {
+                        activePreviewButton = playBtn;
+                        playBtn.textContent = activePreviewAudio.paused ? "▶️ 继续播放" : "⏸️ 暂停试听";
+                    }
+                    playBtn.addEventListener("click", (ev) => previewStoredAudio(q.id, ev.currentTarget));
+                }
+
+                card.querySelector(".btn-gen-audio").addEventListener("click", async (ev) => {
+                    const btn = ev.currentTarget;
+                    const orig = btn.textContent;
+                    btn.disabled = true;
+                    btn.textContent = "⏳ 合成中...";
+                    try {
+                        await generateAndStoreAudioForQuestion(q.id, q.explanation || "");
+                        showToast(`「${q.title}」英文解析语音已入库！`, "success");
+                        renderQuestionBank();
+                    } catch (err) {
+                        btn.disabled = false;
+                        btn.textContent = orig;
+                        showToast("语音合成失败：" + err.message, "error");
+                    }
+                });
+
+                card.querySelector(".btn-del-q").addEventListener("click", () => {
+                    openConfirmModal(
+                        "删除题目",
+                        `确定要永久删除题目「${q.title}」及其关联语音吗？`,
+                        async () => {
+                            await deleteQuestionsByIds([q.id]);
+                        }
+                    );
+                });
+
+                listEl.appendChild(card);
+            });
+
+            syncBankSelectionUI();
+        }
+
+        async function deleteQuestionsByIds(idsToDelete) {
+            if (!Array.isArray(idsToDelete) || idsToDelete.length === 0) return;
+            const badge = document.getElementById("audio-batch-status");
+            badge.classList.remove("hidden");
+
+            try {
+                for (let i = 0; i < idsToDelete.length; i++) {
+                    const qId = idsToDelete[i];
+                    badge.textContent = `🗑️ 正在删除题目 (${i + 1}/${idsToDelete.length})...`;
+                    try {
+                        await idbDeleteAudio(qId);
+                        state.localAudioIds.delete(qId);
+                    } catch {}
+
+                    if (useCloudDb && currentUser) {
+                        await deleteDoc(doc(db, "artifacts", appId, "public", "data", "sat_questions", qId));
+                        try {
+                            await deleteDoc(getQuestionAudioDoc(qId));
+                        } catch {}
+                    }
+                }
+
+                if (!useCloudDb) {
+                    const delSet = new Set(idsToDelete);
+                    state.questions = state.questions.filter((q) => !delSet.has(q.id));
+                    writeLS(LS_KEYS.QUESTIONS, state.questions);
+                }
+
+                idsToDelete.forEach((id) => state.selectedBankQuestionIds.delete(id));
+                badge.classList.add("hidden");
+                renderAllAdminViews();
+                showToast(`已成功删除 ${idsToDelete.length} 道题目！`, "success");
+            } catch (err) {
+                badge.classList.add("hidden");
+                renderAllAdminViews();
+                showToast("删除题目失败：" + err.message, "error");
+            }
+        }
+
+        document.getElementById("bank-search-input").addEventListener("input", renderQuestionBank);
+        document.getElementById("bank-filter-group").addEventListener("change", renderQuestionBank);
+        document.getElementById("bank-filter-category").addEventListener("change", renderQuestionBank);
+        document.getElementById("bank-filter-difficulty").addEventListener("change", renderQuestionBank);
+
+        document.getElementById("bank-select-all").addEventListener("change", (e) => {
+            const visibleIds = state.currentFilteredBankIds || [];
+            if (e.target.checked) visibleIds.forEach((id) => state.selectedBankQuestionIds.add(id));
+            else visibleIds.forEach((id) => state.selectedBankQuestionIds.delete(id));
+            renderQuestionBank();
+        });
+
+        document.getElementById("btn-clear-bank-selection").addEventListener("click", () => {
+            state.selectedBankQuestionIds.clear();
+            renderQuestionBank();
+        });
+
+        document.getElementById("btn-batch-delete-questions").addEventListener("click", () => {
+            const ids = [...state.selectedBankQuestionIds];
+            if (ids.length === 0) return;
+            openConfirmModal(
+                "批量删除题目",
+                `确定要永久删除选中的 ${ids.length} 道题目及其已生成的语音吗？此操作无法撤销。`,
+                async () => {
+                    await deleteQuestionsByIds(ids);
+                }
+            );
+        });
+
+        // Batch generate missing audio with 429 cooldown
+        document.getElementById("btn-generate-missing-audio").addEventListener("click", async () => {
+            const missing = state.questions.filter((q) => !(q.hasAudio || state.localAudioIds.has(q.id)));
+            if (missing.length === 0) {
+                showToast("所有题目都已生成英文语音！", "success");
+                return;
+            }
+            const badge = document.getElementById("audio-batch-status");
+            const btn = document.getElementById("btn-generate-missing-audio");
+            btn.disabled = true;
+            badge.classList.remove("hidden");
+
+            let successCount = 0;
+            for (let i = 0; i < missing.length; i++) {
+                const q = missing[i];
+                badge.textContent = `🔊 正在合成英文语音 (${i + 1}/${missing.length})：${q.title || q.id}`;
+                try {
+                    await generateAndStoreAudioForQuestion(q.id, q.explanation || "");
+                    successCount++;
+                } catch (err) {
+                    if (err.status === 429) {
+                        badge.textContent = `⏳ 触发频率限制，等待 5 秒后继续 (${i + 1}/${missing.length})...`;
+                        await new Promise((r) => setTimeout(r, 5000));
+                        try {
+                            await generateAndStoreAudioForQuestion(q.id, q.explanation || "");
+                            successCount++;
+                        } catch (retryErr) {
+                            showToast(`题目「${q.title}」合成失败：${retryErr.message}`, "error");
+                            break;
+                        }
+                    } else {
+                        showToast(`语音合成中断：${err.message}`, "error");
+                        break;
+                    }
+                }
+            }
+
+            badge.classList.add("hidden");
+            btn.disabled = false;
+            renderQuestionBank();
+            if (successCount > 0) {
+                showToast(`已成功为 ${successCount} 道题目合成并入库英文语音！`, "success");
+            }
+        });
+
+        // Export All JSON
+        document.getElementById("btn-export-all-json").addEventListener("click", () => {
+            if (state.questions.length === 0) {
+                showToast("当前题库为空，无法导出。", "error");
+                return;
+            }
+            const cleanList = state.questions.map(({ id, hasAudio, audioUpdatedAt, ...rest }) => rest);
+            downloadJsonFile(cleanList, `sat_questions_all_${new Date().toISOString().slice(0, 10)}.json`);
+            showToast(`已导出全部 ${cleanList.length} 道题目 JSON！`, "success");
+        });
+
+        // Export by Group Modal
+        const closeGroupExportModal = () => document.getElementById("group-export-modal").classList.add("hidden");
+        document.getElementById("btn-open-group-export").addEventListener("click", () => {
+            const groups = getAllGroupNumbers();
+            const sel = document.getElementById("export-group-select");
+            sel.innerHTML = "";
+            if (groups.length === 0) {
+                const opt = document.createElement("option");
+                opt.value = "__ungrouped__";
+                opt.textContent = `未分组（共 ${state.questions.length} 题）`;
+                sel.appendChild(opt);
+            } else {
+                groups.forEach((g) => {
+                    const count = state.questions.filter((q) => String(q.groupNumber || "").trim() === g).length;
+                    const opt = document.createElement("option");
+                    opt.value = g;
+                    opt.textContent = `组号 ${g}（共 ${count} 题）`;
+                    sel.appendChild(opt);
+                });
+                const ungroupedCount = state.questions.filter((q) => !String(q.groupNumber || "").trim()).length;
+                if (ungroupedCount > 0) {
+                    const opt = document.createElement("option");
+                    opt.value = "__ungrouped__";
+                    opt.textContent = `未分组（共 ${ungroupedCount} 题）`;
+                    sel.appendChild(opt);
+                }
+            }
+            document.getElementById("group-export-modal").classList.remove("hidden");
+        });
+        document.getElementById("close-group-export-modal").addEventListener("click", closeGroupExportModal);
+        document.getElementById("cancel-group-export-modal").addEventListener("click", closeGroupExportModal);
+        document.getElementById("confirm-group-export-btn").addEventListener("click", () => {
+            const targetGroup = document.getElementById("export-group-select").value;
+            const list = state.questions
+                .filter((q) => {
+                    const g = String(q.groupNumber || "").trim();
+                    return targetGroup === "__ungrouped__" ? g === "" : g === targetGroup;
+                })
+                .map(({ id, hasAudio, audioUpdatedAt, ...rest }) => rest);
+
+            if (list.length === 0) {
+                showToast("该组号下暂无题目。", "error");
+                return;
+            }
+            const safeName = targetGroup === "__ungrouped__" ? "ungrouped" : targetGroup.replace(/[^a-zA-Z0-9_-]/g, "_");
+            downloadJsonFile(list, `sat_group_${safeName}_${new Date().toISOString().slice(0, 10)}.json`);
+            closeGroupExportModal();
+            showToast(`已导出组号 ${targetGroup === "__ungrouped__" ? "未分组" : targetGroup} 共 ${list.length} 道题目！`, "success");
+        });
+
+        // Fast JSON Import (No auto TTS)
+        function resolveImportedType(rawType) {
+            if (!rawType) return "logic";
+            const low = String(rawType).trim().toLowerCase();
+            const matched = getQuestionTypes().find(
+                (t) => t.id.toLowerCase() === low || t.name.toLowerCase() === low || t.labelZh.toLowerCase().includes(low)
+            );
+            return matched ? matched.id : low;
+        }
+
+        document.getElementById("input-import-json").addEventListener("change", async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                const items = Array.isArray(parsed) ? parsed : [parsed];
+                const validItems = items.filter((item) => item && item.passage && item.question && Array.isArray(item.options) && item.options.length === 4);
+
+                if (validItems.length === 0) {
+                    showToast("JSON 中未检测到有效题目（需包含 passage、question 及 4 个 options）。", "error");
+                    return;
+                }
+
+                const now = Date.now();
+                for (let i = 0; i < validItems.length; i++) {
+                    const item = validItems[i];
+                    const payload = {
+                        groupNumber: String(item.groupNumber ?? item.group ?? item.group_number ?? "").trim(),
+                        questionType: resolveImportedType(item.questionType || item.type),
+                        title: String(item.title || `Imported SAT Question #${i + 1}`).trim(),
+                        category: String(item.category || "General").trim(),
+                        difficulty: ["easy", "medium", "hard"].includes(item.difficulty) ? item.difficulty : "medium",
+                        passage: String(item.passage).trim(),
+                        question: String(item.question).trim(),
+                        options: item.options.map((o) => String(o).trim()),
+                        correctIndex: Math.min(3, Math.max(0, Number(item.correctIndex) || 0)),
+                        hint: String(item.hint || "").trim(),
+                        explanation: String(item.explanation || "").trim(),
+                        hasAudio: false,
+                        createdAt: now + i
+                    };
+
+                    if (useCloudDb && currentUser) {
+                        await addDoc(getQuestionsCol(), payload);
+                    } else {
+                        state.questions.push({ id: "q_" + now + "_" + i, ...payload });
+                    }
+                }
+
+                if (!useCloudDb) {
+                    writeLS(LS_KEYS.QUESTIONS, state.questions);
+                    renderAllAdminViews();
+                }
+
+                showToast(`成功快速导入 ${validItems.length} 道题目！（可按需再点击生成语音）`, "success");
+            } catch (err) {
+                showToast("JSON 解析或导入失败：" + err.message, "error");
+            }
+        });
+
+        // =====================================================================
+        // 8. MODAL: ADD / EDIT SAT QUESTION
+        // =====================================================================
+        function populateQuestionFormCategories(typeId, selectedCategory = "") {
+            const catSelect = document.getElementById("qf-category");
+            const tMeta = getTypeMeta(typeId);
+            const cats = [...new Set([...(tMeta.categories || []), ...(selectedCategory ? [selectedCategory] : [])])];
+            if (cats.length === 0) cats.push("General");
+            catSelect.innerHTML = "";
+            cats.forEach((c) => {
+                const opt = document.createElement("option");
+                opt.value = c;
+                opt.textContent = c;
+                catSelect.appendChild(opt);
+            });
+            catSelect.value = selectedCategory && cats.includes(selectedCategory) ? selectedCategory : cats[0];
+        }
+
+        function openQuestionModal(question = null) {
+            const typeSelect = document.getElementById("qf-type");
+            typeSelect.innerHTML = "";
+            getQuestionTypes().forEach((t) => {
+                const opt = document.createElement("option");
+                opt.value = t.id;
+                opt.textContent = t.labelZh;
+                typeSelect.appendChild(opt);
+            });
+
+            if (question) {
+                document.getElementById("question-modal-title").textContent = "编辑 SAT 题目";
+                document.getElementById("qf-id").value = question.id;
+                const qType = question.questionType || "logic";
+                typeSelect.value = [...typeSelect.options].some((o) => o.value === qType) ? qType : typeSelect.options[0].value;
+                populateQuestionFormCategories(typeSelect.value, question.category || "");
+                document.getElementById("qf-group").value = question.groupNumber || "";
+                document.getElementById("qf-title").value = question.title || "";
+                document.getElementById("qf-difficulty").value = question.difficulty || "medium";
+                document.getElementById("qf-passage").value = question.passage || "";
+                document.getElementById("qf-question").value = question.question || "";
+                for (let i = 0; i < 4; i++) {
+                    document.getElementById(`qf-opt-${i}`).value = question.options?.[i] || "";
+                }
+                document.getElementById("qf-correct").value = String(question.correctIndex ?? 0);
+                document.getElementById("qf-hint").value = question.hint || "";
+                document.getElementById("qf-explanation").value = question.explanation || "";
+            } else {
+                document.getElementById("question-modal-title").textContent = "新增 SAT 题目";
+                document.getElementById("question-form").reset();
+                document.getElementById("qf-id").value = "";
+                const defaultType = currentBankTypeFilter !== "all" ? currentBankTypeFilter : (getQuestionTypes()[0]?.id || "logic");
+                typeSelect.value = defaultType;
+                populateQuestionFormCategories(defaultType);
+                document.getElementById("qf-difficulty").value = "medium";
+            }
+
+            document.getElementById("question-modal").classList.remove("hidden");
+        }
+
+        const closeQuestionModal = () => document.getElementById("question-modal").classList.add("hidden");
+        document.getElementById("btn-open-add-question").addEventListener("click", () => openQuestionModal(null));
+        document.getElementById("close-question-modal").addEventListener("click", closeQuestionModal);
+        document.getElementById("cancel-question-modal").addEventListener("click", closeQuestionModal);
+        document.getElementById("qf-type").addEventListener("change", (e) => populateQuestionFormCategories(e.target.value));
+
+        document.getElementById("question-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById("submit-question-btn");
+            submitBtn.disabled = true;
+            submitBtn.textContent = "⏳ 正在保存题目...";
+
+            try {
+                const editId = document.getElementById("qf-id").value.trim();
+                const payload = {
+                    questionType: document.getElementById("qf-type").value,
+                    category: document.getElementById("qf-category").value,
+                    groupNumber: document.getElementById("qf-group").value.trim(),
+                    title: document.getElementById("qf-title").value.trim(),
+                    difficulty: document.getElementById("qf-difficulty").value,
+                    passage: document.getElementById("qf-passage").value.trim(),
+                    question: document.getElementById("qf-question").value.trim(),
+                    options: [0, 1, 2, 3].map((i) => document.getElementById(`qf-opt-${i}`).value.trim()),
+                    correctIndex: Number(document.getElementById("qf-correct").value) || 0,
+                    hint: document.getElementById("qf-hint").value.trim(),
+                    explanation: document.getElementById("qf-explanation").value.trim()
+                };
+
+                let savedId = editId;
+                if (editId) {
+                    if (useCloudDb && currentUser) {
+                        await setDoc(doc(db, "artifacts", appId, "public", "data", "sat_questions", editId), payload, { merge: true });
+                    } else {
+                        const idx = state.questions.findIndex((q) => q.id === editId);
+                        if (idx >= 0) {
+                            state.questions[idx] = { ...state.questions[idx], ...payload };
+                            writeLS(LS_KEYS.QUESTIONS, state.questions);
+                        }
+                    }
+                } else {
+                    const createdPayload = { ...payload, hasAudio: false, createdAt: Date.now() };
+                    if (useCloudDb && currentUser) {
+                        const ref = await addDoc(getQuestionsCol(), createdPayload);
+                        savedId = ref.id;
+                    } else {
+                        savedId = "q_" + Date.now();
+                        state.questions.push({ id: savedId, ...createdPayload });
+                        writeLS(LS_KEYS.QUESTIONS, state.questions);
+                    }
+                }
+
+                showToast(editId ? "题目修改已保存！" : "新题目已保存到数据库！", "success");
+
+                closeQuestionModal();
+                if (!useCloudDb) renderAllAdminViews();
+            } catch (err) {
+                showToast("保存题目失败：" + err.message, "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "💾 保存题目";
+            }
+        });
+
+        // =====================================================================
+        // 9. TAB 3: QUESTION TYPES MANAGER
+        // =====================================================================
+        function renderTypesManager() {
+            const container = document.getElementById("admin-types-list");
+            container.innerHTML = "";
+            const types = getQuestionTypes();
+
+            types.forEach((t) => {
+                const style = TYPE_COLOR_STYLES[t.color] || TYPE_COLOR_STYLES.indigo;
+                const qCount = state.questions.filter((q) => (q.questionType || "logic") === t.id).length;
+
+                const card = document.createElement("div");
+                card.className = "rounded-2xl border border-slate-200/90 bg-slate-50/60 p-4 flex flex-col justify-between gap-3";
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${style.badge}">${t.name}</span>
+                            <span class="text-xs font-semibold text-slate-500">${qCount} 道题</span>
+                        </div>
+                        <div class="text-sm font-bold text-slate-900">${t.labelZh}</div>
+                        <div class="flex flex-wrap gap-1.5 pt-1">
+                            ${(t.categories || []).map((c) => `<span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] text-slate-600">${c}</span>`).join("")}
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/70">
+                        <button type="button" class="btn-edit-type px-3 py-1 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 cursor-pointer">
+                            编辑
+                        </button>
+                        <button type="button" class="btn-del-type px-3 py-1 rounded-lg text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                            删除
+                        </button>
+                    </div>
+                `;
+
+                card.querySelector(".btn-edit-type").addEventListener("click", () => openTypeModal(t));
+                card.querySelector(".btn-del-type").addEventListener("click", () => {
+                    if (types.length <= 1) {
+                        showToast("至少需要保留一个题目类型。", "error");
+                        return;
+                    }
+                    openConfirmModal(
+                        "删除题目类型",
+                        `确定要删除题型「${t.labelZh}」吗？（已有题目不会被删除，但筛选归类将受影响）`,
+                        async () => {
+                            const nextTypes = types.filter((item) => item.id !== t.id);
+                            await saveConfigToDb({ ...state.config, questionTypes: nextTypes });
+                            renderAllAdminViews();
+                            showToast("题型已删除并同步！", "success");
+                        }
+                    );
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        function openTypeModal(typeObj = null) {
+            if (typeObj) {
+                document.getElementById("type-modal-title").textContent = "编辑题目类型";
+                document.getElementById("tf-edit-id").value = typeObj.id;
+                document.getElementById("tf-name").value = typeObj.name || "";
+                document.getElementById("tf-label-zh").value = typeObj.labelZh || "";
+                document.getElementById("tf-color").value = typeObj.color || "indigo";
+                document.getElementById("tf-categories").value = (typeObj.categories || []).join(", ");
+            } else {
+                document.getElementById("type-modal-title").textContent = "新增题目类型";
+                document.getElementById("type-form").reset();
+                document.getElementById("tf-edit-id").value = "";
+            }
+            document.getElementById("type-modal").classList.remove("hidden");
+        }
+
+        const closeTypeModal = () => document.getElementById("type-modal").classList.add("hidden");
+        document.getElementById("btn-open-add-type").addEventListener("click", () => openTypeModal(null));
+        document.getElementById("close-type-modal").addEventListener("click", closeTypeModal);
+        document.getElementById("cancel-type-modal").addEventListener("click", closeTypeModal);
+
+        document.getElementById("type-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            try {
+                const editId = document.getElementById("tf-edit-id").value.trim();
+                const name = document.getElementById("tf-name").value.trim();
+                const labelZh = document.getElementById("tf-label-zh").value.trim();
+                const color = document.getElementById("tf-color").value;
+                const categories = document.getElementById("tf-categories").value
+                    .split(/[,，\n]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+
+                const types = getQuestionTypes().map((t) => ({ ...t, categories: [...(t.categories || [])] }));
+                if (editId) {
+                    const idx = types.findIndex((t) => t.id === editId);
+                    if (idx >= 0) types[idx] = { ...types[idx], name, labelZh, color, categories };
+                } else {
+                    const newId = name.toLowerCase().replace(/[^a-z0-9]+/g, "_") || ("type_" + Date.now());
+                    types.push({ id: newId, name, labelZh, color, categories });
+                }
+
+                await saveConfigToDb({ ...state.config, questionTypes: types });
+                closeTypeModal();
+                renderAllAdminViews();
+                showToast("题型配置已保存并同步！", "success");
+            } catch (err) {
+                showToast("保存题型失败：" + err.message, "error");
+            }
+        });
+
+        // =====================================================================
+        // 10. TAB 4: ANALYTICS & ATTEMPTS LOG MANAGEMENT
+        // =====================================================================
+        function renderAdminAnalytics() {
+            const totalQ = state.questions.length;
+            const totalAtt = state.attempts.length;
+            const correctAtt = state.attempts.filter((a) => a.isCorrect).length;
+
+            document.getElementById("admin-stat-questions").textContent = String(totalQ);
+            document.getElementById("admin-stat-attempts").textContent = String(totalAtt);
+            document.getElementById("admin-stat-accuracy").textContent = totalAtt > 0 ? `${Math.round((correctAtt / totalAtt) * 100)}%` : "--%";
+
+            const typeStats = {};
+            const catStats = {};
+            state.attempts.forEach((a) => {
+                const tid = a.questionType || "logic";
+                if (!typeStats[tid]) typeStats[tid] = { total: 0, correct: 0 };
+                typeStats[tid].total++;
+                if (a.isCorrect) typeStats[tid].correct++;
+
+                const cat = a.category || "General";
+                if (!catStats[cat]) catStats[cat] = { total: 0, correct: 0 };
+                catStats[cat].total++;
+                if (a.isCorrect) catStats[cat].correct++;
+            });
+
+            let weakestLabel = "暂无数据";
+            let minAcc = 2;
+            Object.entries(catStats).forEach(([cat, s]) => {
+                const acc = s.correct / s.total;
+                if (acc < minAcc) {
+                    minAcc = acc;
+                    weakestLabel = `${cat} (${Math.round(acc * 100)}%)`;
+                }
+            });
+            document.getElementById("admin-stat-weakest").textContent = weakestLabel;
+
+            const typeEl = document.getElementById("admin-type-breakdown");
+            typeEl.innerHTML = "";
+            if (Object.keys(typeStats).length === 0) {
+                typeEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">暂无学生作答记录</p>`;
+            } else {
+                Object.entries(typeStats).forEach(([tid, s]) => {
+                    const pct = Math.round((s.correct / s.total) * 100);
+                    const meta = getTypeMeta(tid);
+                    const barColor = pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-rose-500";
+                    const row = document.createElement("div");
+                    row.className = "space-y-1";
+                    row.innerHTML = `
+                        <div class="flex justify-between text-xs">
+                            <span class="font-semibold text-slate-800">${meta.labelZh}</span>
+                            <span class="text-slate-500">${pct}% (${s.correct}/${s.total})</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full" style="width: ${Math.max(pct, 4)}%"></div>
+                        </div>
+                    `;
+                    typeEl.appendChild(row);
+                });
+            }
+
+            const catEl = document.getElementById("admin-category-breakdown");
+            catEl.innerHTML = "";
+            if (Object.keys(catStats).length === 0) {
+                catEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">暂无学生作答记录</p>`;
+            } else {
+                Object.entries(catStats)
+                    .sort((a, b) => (a[1].correct / a[1].total) - (b[1].correct / b[1].total))
+                    .forEach(([cat, s]) => {
+                        const pct = Math.round((s.correct / s.total) * 100);
+                        const barColor = pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-rose-500";
+                        const row = document.createElement("div");
+                        row.className = "space-y-1";
+                        row.innerHTML = `
+                            <div class="flex justify-between text-xs">
+                                <span class="font-semibold text-slate-800">${cat}</span>
+                                <span class="text-slate-500">${pct}% (${s.correct}/${s.total})</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full ${barColor} rounded-full" style="width: ${Math.max(pct, 4)}%"></div>
+                            </div>
+                        `;
+                        catEl.appendChild(row);
+                    });
+            }
+
+            renderAttemptsLog();
+        }
+
+        // =====================================================================
+        // 10B. ALL ATTEMPT RECORDS FILTER, BATCH EXPORT & BATCH DELETE
+        // =====================================================================
+        function syncAttemptsSelectionUI() {
+            const visibleIds = state.currentFilteredAttemptIds || [];
+            const selectedVisibleCount = visibleIds.filter((id) => state.selectedAttemptIds.has(id)).length;
+            const totalSelected = state.selectedAttemptIds.size;
+
+            document.getElementById("attempts-selected-count").textContent = `已选 ${totalSelected} 条`;
+            document.getElementById("btn-batch-export-attempts").disabled = totalSelected === 0;
+            document.getElementById("btn-batch-delete-attempts").disabled = totalSelected === 0;
+            document.getElementById("btn-clear-attempts-selection").classList.toggle("hidden", totalSelected === 0);
+
+            const selectAllCb = document.getElementById("attempts-select-all");
+            selectAllCb.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+            selectAllCb.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+        }
+
+        function renderAttemptsLog() {
+            const typeSelect = document.getElementById("attempts-filter-type");
+            const prevType = typeSelect.value || "all";
+            typeSelect.innerHTML = `<option value="all">全部题型</option>`;
+            getQuestionTypes().forEach((t) => {
+                const opt = document.createElement("option");
+                opt.value = t.id;
+                opt.textContent = t.labelZh;
+                typeSelect.appendChild(opt);
+            });
+            typeSelect.value = [...typeSelect.options].some((o) => o.value === prevType) ? prevType : "all";
+
+            const keyword = (document.getElementById("attempts-search-input").value || "").trim().toLowerCase();
+            const resultFilter = document.getElementById("attempts-filter-result").value || "all";
+            const typeFilter = typeSelect.value || "all";
+            const dateFilter = document.getElementById("attempts-filter-date").value || "all";
+
+            const existingAttemptIds = new Set(state.attempts.map((a) => a.id));
+            state.selectedAttemptIds.forEach((id) => {
+                if (!existingAttemptIds.has(id)) state.selectedAttemptIds.delete(id);
+            });
+
+            const now = Date.now();
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const todayTs = startOfToday.getTime();
+            const questionById = new Map(state.questions.map((q) => [q.id, q]));
+
+            const filtered = [...state.attempts]
+                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                .filter((a) => {
+                    const linkedQ = questionById.get(a.questionId);
+                    const qType = a.questionType || linkedQ?.questionType || "logic";
+                    const title = linkedQ?.title || a.questionTitle || a.questionId || "";
+                    const category = a.category || linkedQ?.category || "General";
+                    const groupNum = linkedQ?.groupNumber || "";
+                    const ts = Number(a.timestamp) || 0;
+
+                    if (resultFilter === "correct" && !a.isCorrect) return false;
+                    if (resultFilter === "incorrect" && a.isCorrect) return false;
+                    if (typeFilter !== "all" && qType !== typeFilter) return false;
+
+                    if (dateFilter === "today" && ts < todayTs) return false;
+                    if (dateFilter === "7days" && ts < now - 7 * 24 * 60 * 60 * 1000) return false;
+                    if (dateFilter === "30days" && ts < now - 30 * 24 * 60 * 60 * 1000) return false;
+
+                    if (keyword) {
+                        const hay = `${title} ${groupNum} ${category} ${qType}`.toLowerCase();
+                        if (!hay.includes(keyword)) return false;
+                    }
+                    return true;
+                });
+
+            state.currentFilteredAttemptIds = filtered.map((a) => a.id);
+
+            const summaryEl = document.getElementById("attempts-filter-summary");
+            const correctInFilter = filtered.filter((a) => a.isCorrect).length;
+            const accInFilter = filtered.length > 0 ? Math.round((correctInFilter / filtered.length) * 100) : 0;
+            summaryEl.textContent = filtered.length > 0
+                ? `当前筛选共 ${filtered.length} 条记录（答对 ${correctInFilter} 条 / 答错 ${filtered.length - correctInFilter} 条，正确率 ${accInFilter}%）`
+                : "当前筛选共 0 条记录";
+
+            const listEl = document.getElementById("admin-attempts-list");
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-8">暂无符合筛选条件的答题记录</p>`;
+                syncAttemptsSelectionUI();
+                return;
+            }
+
+            const letters = ["A", "B", "C", "D"];
+            listEl.innerHTML = "";
+
+            filtered.forEach((a) => {
+                const linkedQ = questionById.get(a.questionId);
+                const qType = a.questionType || linkedQ?.questionType || "logic";
+                const tMeta = getTypeMeta(qType);
+                const title = linkedQ?.title || a.questionTitle || a.questionId || "未命名题目";
+                const category = a.category || linkedQ?.category || "General";
+                const groupNum = String(linkedQ?.groupNumber || "").trim();
+                const isChecked = state.selectedAttemptIds.has(a.id);
+
+                const timeStr = a.timestamp
+                    ? new Date(a.timestamp).toLocaleString("zh-CN", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: false
+                    })
+                    : "未知时间";
+
+                const selectedLetter = typeof a.selectedIndex === "number" ? (letters[a.selectedIndex] || "-") : "-";
+                const correctLetter = typeof a.correctIndex === "number" ? (letters[a.correctIndex] || "-") : "-";
+                const triesText = a.attemptsUsed ? `${a.attemptsUsed}次作答` : "";
+
+                let choicesHtml = "";
+                if (Array.isArray(a.selectedIndices) && a.selectedIndices.length > 0) {
+                    choicesHtml = a.selectedIndices
+                        .map((choiceIdx, i) => {
+                            const letter = typeof choiceIdx === "number" ? (letters[choiceIdx] || "-") : "-";
+                            const choiceCorrect = typeof a.correctIndex === "number" && choiceIdx === a.correctIndex;
+                            const badgeStyle = choiceCorrect
+                                ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                : "bg-rose-100 text-rose-700 border-rose-200";
+                            return `<span class="inline-flex items-center px-1.5 py-0.5 rounded border font-bold ${badgeStyle}">第${i + 1}次: ${letter}</span>`;
+                        })
+                        .join(`<span class="text-slate-400 mx-0.5">→</span>`);
+                } else if (a.attemptsUsed === 2) {
+                    const secondStyle = a.isCorrect
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        : "bg-rose-100 text-rose-700 border-rose-200";
+                    choicesHtml = `<span class="inline-flex items-center px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">第1次: 未记录</span><span class="text-slate-400 mx-0.5">→</span><span class="inline-flex items-center px-1.5 py-0.5 rounded border font-bold ${secondStyle}">第2次: ${selectedLetter}</span>`;
+                } else {
+                    const singleStyle = a.isCorrect
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        : "bg-rose-100 text-rose-700 border-rose-200";
+                    choicesHtml = `<span class="inline-flex items-center px-1.5 py-0.5 rounded border font-bold ${singleStyle}">第1次: ${selectedLetter}</span>`;
+                }
+
+                const row = document.createElement("div");
+                row.className = `flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 py-3 rounded-xl border text-xs transition-colors ${
+                    isChecked
+                        ? "bg-indigo-50/70 border-indigo-300"
+                        : "bg-slate-50/60 border-slate-200/80 hover:border-slate-300"
+                }`;
+
+                row.innerHTML = `
+                    <div class="flex items-start gap-3 min-w-0 flex-1">
+                        <input type="checkbox" class="attempt-row-cb w-4 h-4 mt-0.5 accent-indigo-600 rounded cursor-pointer flex-shrink-0" ${isChecked ? "checked" : ""} />
+                        <div class="min-w-0 space-y-1 flex-1">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                                    a.isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                }">${a.isCorrect ? "✓ 答对" : "✕ 答错"}</span>
+                                <span class="font-mono text-[11px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200/80">🕒 ${timeStr}</span>
+                                ${groupNum ? `<span class="px-2 py-0.5 rounded-full bg-slate-800 text-white text-[10px] font-bold">组号 ${groupNum}</span>` : ""}
+                                <span class="font-bold text-slate-800 truncate att-row-title"></span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                <span>${tMeta.labelZh}</span>
+                                <span>·</span>
+                                <span>${category}</span>
+                                <span>·</span>
+                                <span class="inline-flex flex-wrap items-center gap-1">学生选择：${choicesHtml} <span class="text-slate-400">/</span> 正确答案 <strong class="text-slate-700">${correctLetter}</strong></span>
+                                ${triesText ? `<span>· ${triesText}</span>` : ""}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 pl-7 sm:pl-0 flex-shrink-0">
+                        <button type="button" class="btn-del-single-attempt px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                            删除
+                        </button>
+                    </div>
+                `;
+
+                row.querySelector(".att-row-title").textContent = title;
+                row.querySelector(".attempt-row-cb").addEventListener("change", (ev) => {
+                    if (ev.target.checked) state.selectedAttemptIds.add(a.id);
+                    else state.selectedAttemptIds.delete(a.id);
+                    row.className = `flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 py-3 rounded-xl border text-xs transition-colors ${
+                        ev.target.checked
+                            ? "bg-indigo-50/70 border-indigo-300"
+                            : "bg-slate-50/60 border-slate-200/80 hover:border-slate-300"
+                    }`;
+                    syncAttemptsSelectionUI();
+                });
+
+                row.querySelector(".btn-del-single-attempt").addEventListener("click", () => {
+                    openConfirmModal(
+                        "删除答题记录",
+                        `确定要删除「${title}」（${timeStr}）这条答题记录吗？此操作将同步删除数据库中的数据。`,
+                        async () => {
+                            await deleteAttemptRecordsByIds([a.id]);
+                        }
+                    );
+                });
+
+                listEl.appendChild(row);
+            });
+
+            syncAttemptsSelectionUI();
+        }
+
+        async function deleteAttemptRecordsByIds(idsToDelete) {
+            if (!Array.isArray(idsToDelete) || idsToDelete.length === 0) return;
+            const badge = document.getElementById("audio-batch-status");
+            const batchBtn = document.getElementById("btn-batch-delete-attempts");
+            batchBtn.disabled = true;
+            badge.classList.remove("hidden");
+
+            try {
+                if (useCloudDb && currentUser) {
+                    for (let i = 0; i < idsToDelete.length; i++) {
+                        badge.textContent = `🗑️ 正在同步删除答题记录 (${i + 1}/${idsToDelete.length})...`;
+                        await deleteDoc(doc(db, "artifacts", appId, "public", "data", "student_attempts", idsToDelete[i]));
+                    }
+                } else {
+                    const delSet = new Set(idsToDelete);
+                    state.attempts = state.attempts.filter((a) => !delSet.has(a.id));
+                    writeLS(LS_KEYS.ATTEMPTS, state.attempts);
+                }
+
+                idsToDelete.forEach((id) => state.selectedAttemptIds.delete(id));
+                badge.classList.add("hidden");
+                renderAdminAnalytics();
+                showToast(`已成功删除 ${idsToDelete.length} 条答题记录并同步数据库！`, "success");
+            } catch (err) {
+                badge.classList.add("hidden");
+                renderAdminAnalytics();
+                showToast("删除答题记录失败：" + err.message, "error");
+            }
+        }
+
+        document.getElementById("attempts-search-input").addEventListener("input", renderAttemptsLog);
+        document.getElementById("attempts-filter-result").addEventListener("change", renderAttemptsLog);
+        document.getElementById("attempts-filter-type").addEventListener("change", renderAttemptsLog);
+        document.getElementById("attempts-filter-date").addEventListener("change", renderAttemptsLog);
+
+        document.getElementById("attempts-select-all").addEventListener("change", (e) => {
+            const visibleIds = state.currentFilteredAttemptIds || [];
+            if (e.target.checked) visibleIds.forEach((id) => state.selectedAttemptIds.add(id));
+            else visibleIds.forEach((id) => state.selectedAttemptIds.delete(id));
+            renderAttemptsLog();
+        });
+
+        document.getElementById("btn-clear-attempts-selection").addEventListener("click", () => {
+            state.selectedAttemptIds.clear();
+            renderAttemptsLog();
+        });
+
+        document.getElementById("btn-batch-export-attempts").addEventListener("click", () => {
+            const selectedIds = new Set(state.selectedAttemptIds);
+            if (selectedIds.size === 0) return;
+
+            const qById = new Map(state.questions.map((q) => [q.id, q]));
+            const uniqueQuestionIds = new Set();
+            state.attempts.forEach((a) => {
+                if (selectedIds.has(a.id) && a.questionId) {
+                    uniqueQuestionIds.add(a.questionId);
+                }
+            });
+
+            const exportList = [...uniqueQuestionIds]
+                .map((qId) => qById.get(qId))
+                .filter(Boolean)
+                .map(({ id, hasAudio, audioUpdatedAt, ...rest }) => rest);
+
+            if (exportList.length === 0) {
+                showToast("所选答题记录对应的题目在当前题库中未找到完整题干。", "error");
+                return;
+            }
+
+            downloadJsonFile(exportList, `sat_attempts_export_${new Date().toISOString().slice(0, 10)}.json`);
+            showToast(`已从 ${selectedIds.size} 条答题记录中去重导出 ${exportList.length} 道题目 JSON！`, "success");
+        });
+
+        document.getElementById("btn-batch-delete-attempts").addEventListener("click", () => {
+            const ids = [...state.selectedAttemptIds];
+            if (ids.length === 0) return;
+            openConfirmModal(
+                "批量删除答题记录",
+                `确定要永久删除选中的 ${ids.length} 条答题记录吗？系统将同步删除数据库中的对应数据，并重新计算学情统计。`,
+                async () => {
+                    await deleteAttemptRecordsByIds(ids);
+                }
+            );
+        });
+
+        document.getElementById("btn-clear-all-attempts").addEventListener("click", () => {
+            if (state.attempts.length === 0) {
+                showToast("当前没有可清空的学情记录。", "info");
+                return;
+            }
+            openConfirmModal(
+                "清空全部学情数据",
+                `确定要清空数据库中的全部 ${state.attempts.length} 条学生作答记录吗？此操作无法撤销。`,
+                async () => {
+                    const allIds = state.attempts.map((a) => a.id);
+                    await deleteAttemptRecordsByIds(allIds);
+                    state.selectedAttemptIds.clear();
+                }
+            );
+        });
+
+        // =====================================================================
+        // 11. MODAL: FIREBASE CLOUD DATABASE CONFIGURATION
+        // =====================================================================
+        function parseFirebaseConfigText(raw) {
+            const cleaned = raw
+                .replace(/\/\/.*$/gm, "")
+                .replace(/\/\*[\s\S]*?\*\//g, "")
+                .trim();
+            const match = cleaned.match(/\{[\s\S]*\}/);
+            if (!match) throw new Error("未找到有效的配置大括号 { ... }");
+            const jsonLike = match[0]
+                .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+                .replace(/'/g, '"')
+                .replace(/,\s*}/g, "}");
+            const obj = JSON.parse(jsonLike);
+            if (!obj.apiKey || !obj.projectId) {
+                throw new Error("配置中缺少 apiKey 或 projectId 字段");
+            }
+            return obj;
+        }
+
+        function openFirebaseModal() {
+            const { config, source } = resolveFirebaseConfig();
+            const statusBox = document.getElementById("fb-current-status");
+            const input = document.getElementById("fb-config-input");
+            const shareBox = document.getElementById("fb-share-link-box");
+            const shareUrl = document.getElementById("fb-student-share-url");
+
+            if (config) {
+                statusBox.innerHTML = `当前状态：<strong class="text-emerald-700">已配置云端 Firebase</strong>（项目 ID：<code>${config.projectId}</code>，来源：${source === "custom-ls" ? "自定义缓存" : "内置配置"}）`;
+                input.value = JSON.stringify(config, null, 2);
+                const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))));
+                const base = window.location.href.replace(/admin\.html.*$/, "index.html");
+                shareUrl.value = `${base}?fb=${encodeURIComponent(encoded)}`;
+                shareBox.classList.remove("hidden");
+            } else {
+                statusBox.innerHTML = `当前状态：<strong class="text-indigo-700">本地浏览器存储模式</strong>（粘贴配置即可切换至云端同步）`;
+                input.value = "";
+                shareBox.classList.add("hidden");
+            }
+
+            document.getElementById("firebase-modal").classList.remove("hidden");
+        }
+
+        const closeFirebaseModal = () => document.getElementById("firebase-modal").classList.add("hidden");
+        document.getElementById("btn-open-firebase-modal").addEventListener("click", openFirebaseModal);
+        document.getElementById("close-firebase-modal").addEventListener("click", closeFirebaseModal);
+        document.getElementById("cancel-firebase-modal").addEventListener("click", closeFirebaseModal);
+
+        document.getElementById("btn-copy-firestore-rules").addEventListener("click", () => {
+            copyTextFallback(document.getElementById("firestore-rules-snippet").textContent);
+            showToast("Firestore 安全规则已复制到剪贴板！", "success");
+        });
+
+        document.getElementById("btn-copy-student-url").addEventListener("click", () => {
+            copyTextFallback(document.getElementById("fb-student-share-url").value);
+            showToast("学生前台直连链接已复制！", "success");
+        });
+
+        document.getElementById("btn-save-firebase-config").addEventListener("click", () => {
+            try {
+                const parsed = parseFirebaseConfigText(document.getElementById("fb-config-input").value);
+                writeLS(LS_KEYS.FIREBASE_CONFIG, parsed);
+                showToast("Firebase 配置已保存，正在重新连接...", "success");
+                setTimeout(() => window.location.reload(), 600);
+            } catch (err) {
+                showToast("配置解析失败：" + err.message, "error");
+            }
+        });
+
+        document.getElementById("btn-clear-firebase-config").addEventListener("click", () => {
+            localStorage.removeItem(LS_KEYS.FIREBASE_CONFIG);
+            showToast("已清除自定义 Firebase 配置，正在刷新...", "info");
+            setTimeout(() => window.location.reload(), 600);
+        });
+
+        // =====================================================================
+        // 11B. MODAL: GOOGLE CLOUD TEXT-TO-SPEECH CONFIGURATION
+        // =====================================================================
+        function openGcloudTtsModal() {
+            const cfg = getGcloudTtsConfig();
+            const statusBox = document.getElementById("gc-current-status");
+            const keyInput = document.getElementById("gc-api-key-input");
+            const tierSel = document.getElementById("gc-model-tier-select");
+            const rateSel = document.getElementById("gc-rate-select");
+
+            keyInput.value = cfg.apiKey || "";
+            tierSel.value = cfg.modelTier || "Chirp3-HD";
+            rateSel.value = String(cfg.speakingRate || 1);
+            renderGcloudVoiceOptions(tierSel.value, cfg.voiceName);
+
+            if (cfg.apiKey) {
+                statusBox.innerHTML = `当前状态：<strong class="text-emerald-700">已配置 Google Cloud API Key</strong>（当前人声：<code>${document.getElementById("gc-voice-select").value}</code>）`;
+            } else {
+                statusBox.innerHTML = `当前状态：<strong class="text-amber-700">未配置 API Key</strong>（启用 Cloud Text-to-Speech API 后即可免费使用 Chirp 3: HD / WaveNet 等人声）`;
+            }
+            document.getElementById("gcloud-tts-modal").classList.remove("hidden");
+        }
+
+        const closeGcloudTtsModal = () => {
+            stopTestPreviewAudio();
+            document.getElementById("gcloud-tts-modal").classList.add("hidden");
+        };
+        document.getElementById("btn-open-gcloud-tts-modal").addEventListener("click", openGcloudTtsModal);
+        document.getElementById("close-gcloud-tts-modal").addEventListener("click", closeGcloudTtsModal);
+
+        document.getElementById("gc-model-tier-select").addEventListener("change", (e) => {
+            stopTestPreviewAudio();
+            renderGcloudVoiceOptions(e.target.value, "");
+        });
+
+        document.getElementById("btn-fetch-gc-voices").addEventListener("click", async (ev) => {
+            const btn = ev.currentTarget;
+            const apiKey = document.getElementById("gc-api-key-input").value.trim();
+            if (!apiKey) {
+                showToast("请先输入 Google Cloud API Key 再拉取官方人声。", "error");
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = "⏳ 拉取中...";
+            try {
+                const voices = await fetchGcloudEnUsVoices(apiKey);
+                const tier = document.getElementById("gc-model-tier-select").value;
+                const currentSel = document.getElementById("gc-voice-select").value;
+                renderGcloudVoiceOptions(tier, currentSel);
+                showToast(`已拉取到 ${voices.length} 个官方 en-US 人声！`, "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🔄 拉取官方最新人声";
+            }
+        });
+
+        document.getElementById("btn-save-gcloud-config").addEventListener("click", () => {
+            const apiKey = document.getElementById("gc-api-key-input").value.trim();
+            const modelTier = document.getElementById("gc-model-tier-select").value;
+            const voiceName = document.getElementById("gc-voice-select").value;
+            const speakingRate = Number(document.getElementById("gc-rate-select").value) || 1;
+            writeLS(LS_KEYS.GCLOUD_TTS_CONFIG, { apiKey, modelTier, voiceName, speakingRate });
+            closeGcloudTtsModal();
+            showToast(apiKey ? `Google Cloud 语音配置已保存（${voiceName}）！` : "已保存（未填写 API Key）。", "success");
+        });
+
+        document.getElementById("btn-clear-gcloud-config").addEventListener("click", () => {
+            localStorage.removeItem(LS_KEYS.GCLOUD_TTS_CONFIG);
+            localStorage.removeItem(LS_KEYS.GCLOUD_TTS_VOICES_CACHE);
+            document.getElementById("gc-api-key-input").value = "";
+            document.getElementById("gc-model-tier-select").value = "Chirp3-HD";
+            document.getElementById("gc-rate-select").value = "1";
+            renderGcloudVoiceOptions("Chirp3-HD", DEFAULT_GCLOUD_TTS_CONFIG.voiceName);
+            document.getElementById("gc-current-status").innerHTML = `当前状态：<strong class="text-amber-700">已清除 API Key</strong>`;
+            showToast("已清除 Google Cloud API Key。", "info");
+        });
+
+        document.getElementById("btn-test-gcloud-voice").addEventListener("click", async (ev) => {
+            const btn = ev.currentTarget;
+            const apiKey = document.getElementById("gc-api-key-input").value.trim();
+            const modelTier = document.getElementById("gc-model-tier-select").value;
+            const voiceName = document.getElementById("gc-voice-select").value;
+            const speakingRate = Number(document.getElementById("gc-rate-select").value) || 1;
+            const signature = `${apiKey}|${voiceName}|${speakingRate}`;
+
+            // 若当前正在试听同一配置：点击切换暂停 / 继续
+            if (activeTestAudio && activeTestConfigSignature === signature) {
+                if (!activeTestAudio.paused) {
+                    activeTestAudio.pause();
+                    btn.textContent = "▶️ 继续试听";
+                } else {
+                    try {
+                        await activeTestAudio.play();
+                        btn.textContent = "⏸️ 暂停试听";
+                    } catch (err) {
+                        showToast("继续试听失败：" + err.message, "error");
+                    }
+                }
+                return;
+            }
+
+            if (!apiKey) {
+                showToast("请先输入 Google Cloud API Key 再测试语音。", "error");
+                return;
+            }
+
+            stopStoredPreviewAudio();
+            stopTestPreviewAudio();
+
+            writeLS(LS_KEYS.GCLOUD_TTS_CONFIG, { apiKey, modelTier, voiceName, speakingRate });
+            btn.disabled = true;
+            btn.textContent = "⏳ 正在合成试听...";
+
+            try {
+                const sample = await synthesizeEnglishAudioBase64(
+                    "Correct Answer: A. Look closely at the causal claim in the passage. Choice A introduces an alternative cause that directly weakens the conclusion."
+                );
+                const bytes = base64ToUint8Array(sample.audioBase64);
+                const blob = new Blob([bytes], { type: sample.mimeType || "audio/mpeg" });
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+
+                activeTestAudio = audio;
+                activeTestUrl = url;
+                activeTestConfigSignature = signature;
+
+                audio.onended = () => {
+                    stopTestPreviewAudio();
+                };
+                audio.onerror = () => {
+                    stopTestPreviewAudio();
+                    showToast("试听播放出错。", "error");
+                };
+
+                await audio.play();
+                btn.disabled = false;
+                btn.textContent = "⏸️ 暂停试听";
+                showToast(`试听成功（${voiceName}），再次点击可暂停！`, "success");
+            } catch (err) {
+                stopTestPreviewAudio();
+                btn.disabled = false;
+                btn.textContent = "🔊 测试语音";
+                showToast("测试失败：" + err.message, "error");
+            }
+        });
+
+        // =====================================================================
+        // 12. BOOTSTRAP
+        // =====================================================================
+        initDatabase();
+    </script>
+</body>
+</html>
