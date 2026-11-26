@@ -126,13 +126,48 @@
                     <div class="space-y-1 min-w-0">
                         <div class="text-xs font-semibold uppercase tracking-wider text-indigo-100">SAT Virtual Tutor</div>
                         <p id="teacher-message" class="text-sm sm:text-[15px] leading-relaxed text-white/95">
-                            Welcome! Loading your next SAT question from the question bank...
+                            Welcome! Loading your open SAT practice sets...
                         </p>
                     </div>
                 </div>
 
+                <!-- Open Practice Sets Lobby (Multi-Set Selection & Resume) -->
+                <div id="sets-lobby-section" class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4 fade-in">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900">📚 Open Practice Sets</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Select any open practice set below to start or resume. Completed sets automatically clear from your list.</p>
+                        </div>
+                        <span id="lobby-sets-count" class="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            0 Open Sets
+                        </span>
+                    </div>
+                    <div id="open-sets-list" class="space-y-3"></div>
+                </div>
+
+                <!-- Active Set Progress Bar & Save/Exit Header -->
+                <div id="active-set-bar" class="hidden bg-white rounded-2xl border border-indigo-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 fade-in">
+                    <div class="min-w-0 flex-1 space-y-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span id="active-set-serial" class="px-2 py-0.5 rounded-lg font-mono text-xs font-bold bg-indigo-600 text-white"></span>
+                            <h2 id="active-set-name" class="text-sm sm:text-base font-bold text-slate-900 truncate"></h2>
+                            <span id="active-set-progress-text" class="text-xs font-semibold text-indigo-700">0 / 0 completed</span>
+                        </div>
+                        <div class="w-full max-w-md h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div id="active-set-progress-bar" class="h-full bg-indigo-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <button
+                        id="btn-save-exit-set"
+                        type="button"
+                        class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer flex-shrink-0"
+                    >
+                        💾 Save Progress & Back to Sets
+                    </button>
+                </div>
+
                 <!-- Active Question Card -->
-                <div id="question-card" class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-5">
+                <div id="question-card" class="hidden bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-5">
                     <!-- Metadata Badges -->
                     <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
                         <div class="flex flex-wrap items-center gap-2">
@@ -361,6 +396,7 @@
             collection,
             doc,
             addDoc,
+            setDoc,
             deleteDoc,
             onSnapshot,
             getDocs,
@@ -374,6 +410,8 @@
             QUESTIONS: "sat_db_questions_v1",
             ATTEMPTS: "sat_db_attempts_v1",
             CONFIG: "sat_db_config_v1",
+            PRACTICE_SETS: "sat_db_practice_sets_v1",
+            SET_PROGRESS: "sat_db_set_progress_v1",
             FIREBASE_CONFIG: "sat_custom_firebase_config_v1"
         };
 
@@ -664,6 +702,9 @@
         const state = {
             questions: [],
             attempts: [],
+            practiceSets: [],
+            setProgressMap: {},
+            activeSetId: null,
             config: { ...DEFAULT_CONFIG },
             currentQuestion: null,
             selectedOptionIndex: null,
@@ -812,6 +853,15 @@
         function getAttemptsCol() {
             return collection(db, "artifacts", appId, "public", "data", "student_attempts");
         }
+        function getPracticeSetsCol() {
+            return collection(db, "artifacts", appId, "public", "data", "practice_sets");
+        }
+        function getSetProgressCol() {
+            return collection(db, "artifacts", appId, "public", "data", "student_set_progress");
+        }
+        function getSetProgressDoc(setId) {
+            return doc(db, "artifacts", appId, "public", "data", "student_set_progress", setId);
+        }
         function getConfigDoc() {
             return doc(db, "artifacts", appId, "public", "data", "tutor_settings", "strategy_config");
         }
@@ -902,23 +952,31 @@
             const storedAttempts = readLS(LS_KEYS.ATTEMPTS, []);
             state.attempts = Array.isArray(storedAttempts) ? storedAttempts : [];
 
+            const storedSets = readLS(LS_KEYS.PRACTICE_SETS, []);
+            state.practiceSets = Array.isArray(storedSets)
+                ? storedSets.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                : [];
+
+            const storedProgress = readLS(LS_KEYS.SET_PROGRESS, {});
+            state.setProgressMap = storedProgress && typeof storedProgress === "object" ? storedProgress : {};
+
             updateHeaderScopeAndStrategyUI();
             renderStudentStats();
-            if (!state.currentQuestion) {
-                matchAndDisplayNextQuestion(false);
-            }
+            renderStudentWorkspace();
         }
 
         function subscribeCloudData() {
             let questionsReady = false;
             let configReady = false;
             let attemptsReady = false;
-            let initialMatched = false;
+            let setsReady = false;
+            let progressReady = false;
+            let initialRendered = false;
 
-            const tryInitialMatch = () => {
-                if (!initialMatched && questionsReady && configReady && attemptsReady) {
-                    initialMatched = true;
-                    matchAndDisplayNextQuestion(false);
+            const tryInitialRender = () => {
+                if (!initialRendered && questionsReady && configReady && attemptsReady && setsReady && progressReady) {
+                    initialRendered = true;
+                    renderStudentWorkspace();
                 }
             };
 
@@ -929,19 +987,15 @@
                 state.questions = list;
                 questionsReady = true;
                 renderStudentStats();
-                if (initialMatched && !state.currentQuestion && state.questions.length > 0) {
-                    matchAndDisplayNextQuestion(false);
-                } else {
-                    tryInitialMatch();
-                }
-            });
+                if (initialRendered) renderStudentWorkspace();
+                else tryInitialRender();
+            }, (err) => console.warn("Questions snapshot error:", err));
 
             onSnapshot(getConfigDoc(), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    const prevGroup = state.config.focusGroup || "";
                     state.config = {
-                        strategy: data.strategy || "adaptive",
+                        strategy: data.strategy || "sequential",
                         allowHints: data.allowHints !== false,
                         autoAdvanceThreshold: Number(data.autoAdvanceThreshold) || 2,
                         focusGroup: data.focusGroup ? String(data.focusGroup).trim() : "",
@@ -954,32 +1008,47 @@
                             ? data.questionTypes
                             : DEFAULT_QUESTION_TYPES.map((t) => ({ ...t, categories: [...t.categories] }))
                     };
-                    updateHeaderScopeAndStrategyUI();
-                    renderStudentStats();
-
-                    if (initialMatched) {
-                        const shouldRefreshForQuota =
-                            state.currentQuestion &&
-                            !state.isAnswered &&
-                            !isQuestionEligibleForPractice(state.currentQuestion.id);
-
-                        const shouldRefreshForGroup =
-                            state.currentQuestion &&
-                            !state.isAnswered &&
-                            prevGroup !== state.config.focusGroup &&
-                            state.config.focusGroup &&
-                            String(state.currentQuestion.groupNumber || "").trim() !== state.config.focusGroup;
-
-                        if (shouldRefreshForQuota || shouldRefreshForGroup || !state.currentQuestion) {
-                            matchAndDisplayNextQuestion(false);
-                        }
-                    }
-                } else {
-                    updateHeaderScopeAndStrategyUI();
                 }
+                updateHeaderScopeAndStrategyUI();
+                renderStudentStats();
                 configReady = true;
-                tryInitialMatch();
-            });
+                tryInitialRender();
+            }, (err) => console.warn("Config snapshot error:", err));
+
+            onSnapshot(getPracticeSetsCol(), (snap) => {
+                const list = [];
+                snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+                list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                state.practiceSets = list;
+                setsReady = true;
+                if (initialRendered) {
+                    // 若当前所在套题已被后台删除，自动返回套题大厅
+                    if (state.activeSetId && !list.some((s) => s.id === state.activeSetId)) {
+                        stopExplanationSpeech();
+                        closeExplanationPopup();
+                        state.activeSetId = null;
+                        state.currentQuestion = null;
+                        showToast("This practice set is no longer available.", "info");
+                    }
+                    renderStudentWorkspace();
+                } else {
+                    tryInitialRender();
+                }
+            }, (err) => console.warn("Practice sets snapshot error:", err));
+
+            onSnapshot(getSetProgressCol(), (snap) => {
+                const map = {};
+                snap.forEach((d) => {
+                    map[d.id] = { id: d.id, ...d.data() };
+                });
+                state.setProgressMap = map;
+                progressReady = true;
+                if (initialRendered && !state.activeSetId) {
+                    renderStudentWorkspace();
+                } else {
+                    tryInitialRender();
+                }
+            }, (err) => console.warn("Set progress snapshot error:", err));
 
             onSnapshot(getAttemptsCol(), (snap) => {
                 const list = [];
@@ -988,58 +1057,65 @@
                 state.attempts = list;
                 attemptsReady = true;
                 renderStudentStats();
-
-                if (!initialMatched) {
-                    tryInitialMatch();
-                    return;
+                if (!initialRendered) {
+                    tryInitialRender();
+                } else if (!state.activeSetId) {
+                    renderStudentWorkspace();
+                } else {
+                    updateActiveSetBarUI();
                 }
+            }, (err) => console.warn("Attempts snapshot error:", err));
+        }
 
-                // 若当前展示的未提交题目已达允许练习次数，则自动切换至剩余题目或完成卡片
-                if (
-                    state.currentQuestion &&
-                    !state.isAnswered &&
-                    !isQuestionEligibleForPractice(state.currentQuestion.id)
-                ) {
-                    matchAndDisplayNextQuestion(false);
-                }
+        // =====================================================================
+        // 4. MULTI-SET LOBBY, SAVE/RESUME PROGRESS & ADAPTIVE PRACTICE
+        // =====================================================================
+        function getSetProgressSummary(setObj) {
+            const qById = new Map(state.questions.map((q) => [q.id, q]));
+            const validQuestionIds = (setObj?.questionIds || []).filter((qid) => qById.has(qid));
+            const setAttempts = state.attempts.filter((a) => a.setId === setObj.id && validQuestionIds.includes(a.questionId));
+            const completedIds = new Set(setAttempts.map((a) => a.questionId));
+            const remainingIds = validQuestionIds.filter((qid) => !completedIds.has(qid));
+            const totalCount = validQuestionIds.length;
+            const completedCount = completedIds.size;
+            const isCompleted = totalCount > 0 && remainingIds.length === 0;
+            const savedState = state.setProgressMap?.[setObj.id] || null;
+            const hasSavedProgress = completedCount > 0 || Boolean(savedState && savedState.currentQuestionId && remainingIds.includes(savedState.currentQuestionId));
+
+            return {
+                validQuestionIds,
+                completedIds,
+                remainingIds,
+                totalCount,
+                completedCount,
+                isCompleted,
+                savedState,
+                hasSavedProgress
+            };
+        }
+
+        function getOpenIncompleteSets() {
+            return (state.practiceSets || []).filter((s) => {
+                if (s.status === "closed") return false;
+                const summary = getSetProgressSummary(s);
+                return summary.totalCount > 0 && !summary.isCompleted;
             });
         }
 
-        // =====================================================================
-        // 4. ADAPTIVE MATCHING, TWO-CHANCE SUBMISSION & STUDENT UI
-        // =====================================================================
-        function getQuestionDoneCount(questionId) {
-            if (!questionId) return 0;
-            let count = 0;
-            for (const a of state.attempts) {
-                if (a.questionId === questionId) count++;
-            }
-            return count;
-        }
-
-        function getQuestionAllowedCount(questionId) {
-            const raw = state.config?.questionOpenQuota?.[questionId];
-            return Math.max(1, Number(raw) || 1);
-        }
-
-        function isQuestionEligibleForPractice(questionId) {
-            return getQuestionDoneCount(questionId) < getQuestionAllowedCount(questionId);
-        }
-
         function updateHeaderScopeAndStrategyUI() {
-            const stratKey = state.config.strategy || "adaptive";
-            const stratInfo = STRATEGY_META[stratKey] || STRATEGY_META.adaptive;
+            const stratKey = state.config.strategy || "sequential";
+            const stratInfo = STRATEGY_META[stratKey] || STRATEGY_META.sequential;
             document.getElementById("stat-strategy").textContent = stratInfo.name;
             document.getElementById("stat-strategy-sub").textContent = stratInfo.desc;
 
             const scopeEl = document.getElementById("stat-focus-scope");
-            const parts = [];
-            if (state.config.focusGroup) parts.push(`Group: ${state.config.focusGroup}`);
-            if (Array.isArray(state.config.focusTypes) && state.config.focusTypes.length > 0) {
-                const names = state.config.focusTypes.map((id) => getTypeMeta(id).name);
-                parts.push(names.join(" + "));
+            const activeSet = state.activeSetId ? state.practiceSets.find((s) => s.id === state.activeSetId) : null;
+            if (activeSet) {
+                scopeEl.textContent = `Set ${activeSet.serialNumber} · ${activeSet.name}`;
+            } else {
+                const openCount = getOpenIncompleteSets().length;
+                scopeEl.textContent = `${openCount} Open Practice Set${openCount === 1 ? "" : "s"}`;
             }
-            scopeEl.textContent = parts.length > 0 ? parts.join(" · ") : "All Question Types";
 
             const diffMeta = DIFFICULTY_META[state.targetDifficulty] || DIFFICULTY_META.medium;
             const diffBadge = document.getElementById("stat-difficulty");
@@ -1052,94 +1128,245 @@
             }
         }
 
-        function getEligibleQuestionsPool() {
-            let pool = [...state.questions];
-            if (pool.length === 0) return [];
+        function updateActiveSetBarUI() {
+            const bar = document.getElementById("active-set-bar");
+            if (!bar || !state.activeSetId) return;
+            const activeSet = state.practiceSets.find((s) => s.id === state.activeSetId);
+            if (!activeSet) return;
+            const summary = getSetProgressSummary(activeSet);
+            const pct = summary.totalCount > 0 ? Math.round((summary.completedCount / summary.totalCount) * 100) : 0;
+            document.getElementById("active-set-serial").textContent = activeSet.serialNumber || "";
+            document.getElementById("active-set-name").textContent = activeSet.name || "Practice Set";
+            document.getElementById("active-set-progress-text").textContent = `${summary.completedCount} / ${summary.totalCount} completed`;
+            document.getElementById("active-set-progress-bar").style.width = `${pct}%`;
+        }
 
-            const focusGroup = String(state.config.focusGroup || "").trim();
-            if (focusGroup) {
-                const byGroup = pool.filter((q) => String(q.groupNumber || "").trim() === focusGroup);
-                if (byGroup.length > 0) pool = byGroup;
+        function renderStudentWorkspace() {
+            const lobbyEl = document.getElementById("sets-lobby-section");
+            const activeBar = document.getElementById("active-set-bar");
+            const questionCard = document.getElementById("question-card");
+            const completeCard = document.getElementById("daily-complete-card");
+
+            updateHeaderScopeAndStrategyUI();
+
+            // 正在练习某套题中
+            if (state.activeSetId) {
+                const activeSet = state.practiceSets.find((s) => s.id === state.activeSetId);
+                if (!activeSet) {
+                    state.activeSetId = null;
+                    renderStudentWorkspace();
+                    return;
+                }
+                const summary = getSetProgressSummary(activeSet);
+                if (summary.isCompleted && !state.isAnswered) {
+                    state.activeSetId = null;
+                    state.currentQuestion = null;
+                    renderStudentWorkspace();
+                    return;
+                }
+
+                lobbyEl.classList.add("hidden");
+                completeCard.classList.add("hidden");
+                activeBar.classList.remove("hidden");
+                questionCard.classList.remove("hidden");
+                updateActiveSetBarUI();
+                return;
             }
 
-            if (Array.isArray(state.config.focusTypes) && state.config.focusTypes.length > 0) {
-                const typeSet = new Set(state.config.focusTypes);
-                const byType = pool.filter((q) => typeSet.has(q.questionType || DEFAULT_TYPE_ID));
-                if (byType.length > 0) pool = byType;
+            // 套题大厅模式
+            activeBar.classList.add("hidden");
+            questionCard.classList.add("hidden");
+
+            const openSets = getOpenIncompleteSets();
+            document.getElementById("lobby-sets-count").textContent = `${openSets.length} Open Set${openSets.length === 1 ? "" : "s"}`;
+
+            if (openSets.length === 0) {
+                lobbyEl.classList.add("hidden");
+                completeCard.classList.remove("hidden");
+                const totalSets = (state.practiceSets || []).length;
+                document.getElementById("daily-complete-message").textContent = totalSets > 0
+                    ? "Awesome work! You have completed all currently open practice sets. Check back when your instructor opens a new set."
+                    : "No practice sets are currently open. Please ask your instructor to open a set in the admin portal.";
+                document.getElementById("daily-complete-summary").textContent = totalSets > 0
+                    ? `All ${totalSets} assigned set${totalSets === 1 ? "" : "s"} completed`
+                    : "Waiting for instructor to open a practice set";
+                document.getElementById("teacher-message").textContent = totalSets > 0
+                    ? "Congratulations! Every open practice set has been completed."
+                    : "Welcome! Waiting for your instructor to publish an open SAT practice set.";
+                return;
             }
 
-            if (Array.isArray(state.config.focusCategories) && state.config.focusCategories.length > 0) {
-                const catSet = new Set(state.config.focusCategories);
-                const byCat = pool.filter((q) => catSet.has(q.category));
-                if (byCat.length > 0) pool = byCat;
+            completeCard.classList.add("hidden");
+            lobbyEl.classList.remove("hidden");
+            document.getElementById("teacher-message").textContent =
+                `You have ${openSets.length} open practice set${openSets.length === 1 ? "" : "s"} ready! Choose a set below to begin or resume where you left off.`;
+
+            const listEl = document.getElementById("open-sets-list");
+            listEl.innerHTML = "";
+
+            openSets.forEach((setObj) => {
+                const summary = getSetProgressSummary(setObj);
+                const pct = summary.totalCount > 0 ? Math.round((summary.completedCount / summary.totalCount) * 100) : 0;
+                const createdStr = setObj.createdAt ? new Date(setObj.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+
+                const card = document.createElement("div");
+                card.className = "rounded-2xl border border-slate-200 hover:border-indigo-300 bg-slate-50/70 hover:bg-indigo-50/30 p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4";
+                card.innerHTML = `
+                    <div class="min-w-0 flex-1 space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-lg font-mono text-xs font-bold bg-slate-900 text-white">${setObj.serialNumber || ""}</span>
+                            <h3 class="text-sm sm:text-base font-bold text-slate-900 truncate set-title"></h3>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                summary.hasSavedProgress
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-emerald-100 text-emerald-700"
+                            }">
+                                ${summary.hasSavedProgress ? "⏸ In Progress" : "🆕 New Set"}
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                            <span>Completed <strong class="text-slate-800">${summary.completedCount} / ${summary.totalCount}</strong></span>
+                            <span>·</span>
+                            <span><strong class="text-indigo-700">${summary.remainingIds.length}</strong> remaining</span>
+                            ${createdStr ? `<span>· Opened ${createdStr}</span>` : ""}
+                        </div>
+                        <div class="w-full max-w-md h-2 bg-slate-200/80 rounded-full overflow-hidden">
+                            <div class="h-full bg-indigo-600 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-enter-set px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition-colors cursor-pointer flex-shrink-0">
+                        ${summary.hasSavedProgress ? "▶ Resume Practice" : "▶ Start Practice"}
+                    </button>
+                `;
+                card.querySelector(".set-title").textContent = setObj.name || "SAT Practice Set";
+                card.querySelector(".btn-enter-set").addEventListener("click", () => enterPracticeSet(setObj.id));
+                listEl.appendChild(card);
+            });
+        }
+
+        async function saveCurrentSetProgress(andExit = false) {
+            const setId = state.activeSetId;
+            if (setId && state.currentQuestion && !state.isAnswered) {
+                const payload = {
+                    setId,
+                    currentQuestionId: state.currentQuestion.id,
+                    attemptNumber: state.attemptNumber,
+                    eliminatedIndices: [...state.eliminatedIndices],
+                    attemptChoices: [...state.attemptChoices],
+                    selectedOptionIndex: state.selectedOptionIndex,
+                    updatedAt: Date.now()
+                };
+                state.setProgressMap[setId] = payload;
+                writeLS(LS_KEYS.SET_PROGRESS, state.setProgressMap);
+                if (useCloudDb && currentUser) {
+                    try {
+                        await setDoc(getSetProgressDoc(setId), payload);
+                    } catch (err) {
+                        console.warn("Cloud progress save failed:", err);
+                    }
+                }
             }
 
-            return pool;
+            if (andExit) {
+                stopExplanationSpeech();
+                closeExplanationPopup();
+                state.activeSetId = null;
+                state.currentQuestion = null;
+                state.isAnswered = false;
+                renderStudentWorkspace();
+                showToast("💾 Progress saved! You can resume this practice set anytime.", "success");
+            }
+        }
+
+        async function clearSavedSetProgress(setId) {
+            if (!setId) return;
+            if (state.setProgressMap && state.setProgressMap[setId]) {
+                delete state.setProgressMap[setId];
+                writeLS(LS_KEYS.SET_PROGRESS, state.setProgressMap);
+            }
+            if (useCloudDb && currentUser) {
+                try {
+                    await deleteDoc(getSetProgressDoc(setId));
+                } catch {}
+            }
+        }
+
+        function enterPracticeSet(setId) {
+            const setObj = state.practiceSets.find((s) => s.id === setId);
+            if (!setObj) return;
+            const summary = getSetProgressSummary(setObj);
+            if (summary.isCompleted) {
+                showToast("This practice set is already completed!", "info");
+                renderStudentWorkspace();
+                return;
+            }
+
+            state.activeSetId = setId;
+            state.sequentialIndex = 0;
+
+            // 若有中途保存的进度，优先恢复至保存的那道题与作答状态
+            const saved = summary.savedState;
+            if (saved && saved.currentQuestionId && summary.remainingIds.includes(saved.currentQuestionId)) {
+                const q = state.questions.find((item) => item.id === saved.currentQuestionId);
+                if (q) {
+                    stopExplanationSpeech();
+                    closeExplanationPopup();
+                    state.currentQuestion = q;
+                    state.attemptNumber = Number(saved.attemptNumber) === 2 ? 2 : 1;
+                    state.eliminatedIndices = new Set(Array.isArray(saved.eliminatedIndices) ? saved.eliminatedIndices : []);
+                    state.attemptChoices = Array.isArray(saved.attemptChoices) ? [...saved.attemptChoices] : [];
+                    state.selectedOptionIndex = typeof saved.selectedOptionIndex === "number" ? saved.selectedOptionIndex : null;
+                    state.isAnswered = false;
+                    document.getElementById("teacher-message").textContent =
+                        `Welcome back! Resuming "${setObj.name}" (${summary.completedCount}/${summary.totalCount} completed).`;
+                    renderStudentWorkspace();
+                    renderCurrentQuestion();
+                    return;
+                }
+            }
+
+            renderStudentWorkspace();
+            matchAndDisplayNextQuestion(false);
         }
 
         function matchAndDisplayNextQuestion(avoidCurrent = true) {
             stopExplanationSpeech();
             closeExplanationPopup();
 
-            const questionCard = document.getElementById("question-card");
-            const dailyCompleteCard = document.getElementById("daily-complete-card");
-
-            let pool = getEligibleQuestionsPool();
-            if (pool.length === 0) {
-                if (questionCard) questionCard.classList.remove("hidden");
-                if (dailyCompleteCard) dailyCompleteCard.classList.add("hidden");
-                document.getElementById("teacher-message").textContent =
-                    "No SAT questions are available yet. Please ask your instructor to add questions in the admin portal.";
+            const activeSet = state.activeSetId ? state.practiceSets.find((s) => s.id === state.activeSetId) : null;
+            if (!activeSet) {
+                state.activeSetId = null;
+                renderStudentWorkspace();
                 return;
             }
 
-            // 默认每道题仅允许练习 1 次（后台确认再次开放后才允许额外练习 1 次）
-            const remainingEligible = pool.filter((q) => isQuestionEligibleForPractice(q.id));
-            if (remainingEligible.length === 0) {
+            const summary = getSetProgressSummary(activeSet);
+            if (summary.remainingIds.length === 0) {
+                const finishedName = activeSet.name || activeSet.serialNumber;
+                clearSavedSetProgress(activeSet.id);
+                state.activeSetId = null;
                 state.currentQuestion = null;
                 state.selectedOptionIndex = null;
                 state.isAnswered = false;
-                if (questionCard) questionCard.classList.add("hidden");
-                if (dailyCompleteCard) dailyCompleteCard.classList.remove("hidden");
-                const summaryEl = document.getElementById("daily-complete-summary");
-                if (summaryEl) {
-                    summaryEl.textContent = `Completed ${pool.length} / ${pool.length} assigned questions`;
-                }
-                document.getElementById("teacher-message").textContent =
-                    "Awesome work! You have completed all currently open SAT questions. Ask your instructor to open new questions or re-open a set for review.";
+                renderStudentWorkspace();
+                showToast(`🎉 Set "${finishedName}" completed!`, "success");
                 return;
             }
-            pool = remainingEligible;
 
-            if (questionCard) questionCard.classList.remove("hidden");
-            if (dailyCompleteCard) dailyCompleteCard.classList.add("hidden");
+            const qById = new Map(state.questions.map((q) => [q.id, q]));
+            const remainingPool = summary.remainingIds.map((id) => qById.get(id)).filter(Boolean);
 
-            let candidates = avoidCurrent && state.currentQuestion && pool.length > 1
-                ? pool.filter((q) => q.id !== state.currentQuestion.id)
-                : pool;
+            let candidates = avoidCurrent && state.currentQuestion && remainingPool.length > 1
+                ? remainingPool.filter((q) => q.id !== state.currentQuestion.id)
+                : remainingPool;
 
-            const answeredIds = new Set(state.attempts.map((a) => a.questionId));
-            const unattempted = candidates.filter((q) => !answeredIds.has(q.id));
-            const strategy = state.config.strategy || "adaptive";
+            const strategy = state.config.strategy || "sequential";
             let chosen = null;
             let tutorPrompt = "";
 
             if (strategy === "sequential") {
-                chosen = candidates[state.sequentialIndex % candidates.length];
-                state.sequentialIndex++;
-                tutorPrompt = `Here is your next question in sequence (${chosen.category}). Read the passage carefully before choosing your answer.`;
-            } else if (strategy === "wrong_review") {
-                const latestOutcome = new Map();
-                state.attempts.forEach((a) => latestOutcome.set(a.questionId, a.isCorrect));
-                const stillWrong = candidates.filter((q) => latestOutcome.get(q.id) === false);
-                if (stillWrong.length > 0) {
-                    chosen = stillWrong[Math.floor(Math.random() * stillWrong.length)];
-                    tutorPrompt = `Let's review a previously missed ${getTypeMeta(chosen.questionType).name} question on ${chosen.category}.`;
-                } else {
-                    const base = unattempted.length > 0 ? unattempted : candidates;
-                    chosen = base[Math.floor(Math.random() * base.length)];
-                    tutorPrompt = `Great job clearing your missed questions! Here is a fresh ${chosen.category} question.`;
-                }
+                chosen = candidates[0];
+                tutorPrompt = `Question ${summary.completedCount + 1} of ${summary.totalCount} (${chosen.category}). Read the passage carefully before choosing your answer.`;
             } else if (strategy === "weakest_first") {
                 const catStats = {};
                 state.attempts.forEach((a) => {
@@ -1148,27 +1375,24 @@
                     catStats[c].total++;
                     if (a.isCorrect) catStats[c].correct++;
                 });
-                const base = unattempted.length > 0 ? unattempted : candidates;
-                base.sort((a, b) => {
+                const sorted = [...candidates].sort((a, b) => {
                     const sa = catStats[a.category];
                     const sb = catStats[b.category];
                     const accA = sa && sa.total > 0 ? sa.correct / sa.total : 0.5;
                     const accB = sb && sb.total > 0 ? sb.correct / sb.total : 0.5;
                     return accA - accB;
                 });
-                chosen = base[0];
-                tutorPrompt = `Targeting your focus area: ${chosen.category}. Take your time analyzing the clues in the passage.`;
+                chosen = sorted[0];
+                tutorPrompt = `Targeting your focus area: ${chosen.category} (${summary.completedCount + 1}/${summary.totalCount}).`;
             } else if (strategy === "random") {
-                const base = unattempted.length > 0 ? unattempted : candidates;
-                chosen = base[Math.floor(Math.random() * base.length)];
-                tutorPrompt = `Random practice check-in (${getTypeMeta(chosen.questionType).name} · ${chosen.category}).`;
+                chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                tutorPrompt = `Question ${summary.completedCount + 1} of ${summary.totalCount} (${getTypeMeta(chosen.questionType).name} · ${chosen.category}).`;
             } else {
-                const base = unattempted.length > 0 ? unattempted : candidates;
-                const byDiff = base.filter((q) => q.difficulty === state.targetDifficulty);
-                const finalPool = byDiff.length > 0 ? byDiff : base;
+                const byDiff = candidates.filter((q) => q.difficulty === state.targetDifficulty);
+                const finalPool = byDiff.length > 0 ? byDiff : candidates;
                 chosen = finalPool[Math.floor(Math.random() * finalPool.length)];
                 const diffLabel = (DIFFICULTY_META[chosen.difficulty] || DIFFICULTY_META.medium).label;
-                tutorPrompt = `Matched at ${diffLabel} difficulty (${getTypeMeta(chosen.questionType).name} · ${chosen.category}). Read closely and pick the strongest choice.`;
+                tutorPrompt = `Question ${summary.completedCount + 1} of ${summary.totalCount} · ${diffLabel} difficulty (${chosen.category}).`;
             }
 
             state.currentQuestion = chosen;
@@ -1179,6 +1403,7 @@
             state.isAnswered = false;
 
             document.getElementById("teacher-message").textContent = tutorPrompt;
+            updateActiveSetBarUI();
             renderCurrentQuestion();
         }
 
@@ -1392,13 +1617,8 @@
 
         async function handleAnswerSubmit() {
             const q = state.currentQuestion;
-            if (!q || state.selectedOptionIndex === null || state.isAnswered) return;
-
-            if (!isQuestionEligibleForPractice(q.id)) {
-                showToast("You have already completed this question.", "info");
-                matchAndDisplayNextQuestion(false);
-                return;
-            }
+            const activeSet = state.activeSetId ? state.practiceSets.find((s) => s.id === state.activeSetId) : null;
+            if (!q || !activeSet || state.selectedOptionIndex === null || state.isAnswered) return;
 
             const isCorrect = state.selectedOptionIndex === q.correctIndex;
             const letters = ["A", "B", "C", "D"];
@@ -1417,6 +1637,8 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = "Submit Second Try";
                 renderOptionsList();
+                // 第 1 次答错后自动保存当前进度，防止中途关闭页面丢失第二次机会状态
+                await saveCurrentSetProgress(false);
                 return;
             }
 
@@ -1465,6 +1687,9 @@
             }
 
             await recordAttemptToDb({
+                setId: activeSet.id,
+                setSerialNumber: activeSet.serialNumber || "",
+                setName: activeSet.name || "",
                 questionId: q.id,
                 questionTitle: q.title || "",
                 questionType: q.questionType || DEFAULT_TYPE_ID,
@@ -1477,6 +1702,14 @@
                 attemptsUsed: state.attemptNumber,
                 timestamp: Date.now()
             });
+
+            await clearSavedSetProgress(activeSet.id);
+            updateActiveSetBarUI();
+
+            const updatedSummary = getSetProgressSummary(activeSet);
+            nextBtn.textContent = updatedSummary.remainingIds.length === 0
+                ? "🎉 Finish Set & Return to Sets"
+                : "Next Question →";
 
             // 第 2 次作答（无论第 2 次答对还是答错）均自动弹出语音解析画面
             if (!solvedOnFirstTry) {
@@ -1534,7 +1767,7 @@
                 row.innerHTML = `
                     <div class="min-w-0">
                         <div class="font-semibold text-slate-800 truncate att-title"></div>
-                        <div class="text-[11px] text-slate-400">${getTypeMeta(att.questionType).name} · ${att.category || "General"}</div>
+                        <div class="text-[11px] text-slate-400 truncate">${att.setSerialNumber ? `[${att.setSerialNumber}] ` : ""}${getTypeMeta(att.questionType).name} · ${att.category || "General"}</div>
                     </div>
                     <span class="px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${
                         att.isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
@@ -1557,15 +1790,25 @@
                             for (const att of state.attempts) {
                                 await deleteDoc(doc(db, "artifacts", appId, "public", "data", "student_attempts", att.id));
                             }
+                            for (const setId of Object.keys(state.setProgressMap || {})) {
+                                try {
+                                    await deleteDoc(getSetProgressDoc(setId));
+                                } catch {}
+                            }
                         }
                         state.attempts = [];
+                        state.setProgressMap = {};
+                        state.activeSetId = null;
+                        state.currentQuestion = null;
+                        state.isAnswered = false;
                         state.streak = 0;
                         state.targetDifficulty = "medium";
                         state.sequentialIndex = 0;
                         writeLS(LS_KEYS.ATTEMPTS, []);
+                        writeLS(LS_KEYS.SET_PROGRESS, {});
                         updateHeaderScopeAndStrategyUI();
                         renderStudentStats();
-                        matchAndDisplayNextQuestion(false);
+                        renderStudentWorkspace();
                         showToast("Practice progress has been reset.", "success");
                     } catch (err) {
                         showToast("Reset failed: " + err.message, "error");
@@ -1993,6 +2236,7 @@
 
         document.getElementById("btn-submit-answer").addEventListener("click", handleAnswerSubmit);
         document.getElementById("btn-next-question").addEventListener("click", () => matchAndDisplayNextQuestion(true));
+        document.getElementById("btn-save-exit-set").addEventListener("click", () => saveCurrentSetProgress(true));
         document.getElementById("btn-reset-progress").addEventListener("click", handleResetStudentProgress);
         document.getElementById("btn-speak-explanation").addEventListener("click", toggleExplanationSpeech);
         document.getElementById("btn-replay-explanation-popup").addEventListener("click", () => {
