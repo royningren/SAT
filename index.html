@@ -152,9 +152,10 @@
                         <h2 id="q-title" class="text-xs sm:text-sm font-semibold text-slate-500"></h2>
                     </div>
 
-                    <!-- SAT Passage -->
-                    <div class="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/70">
-                        <p id="q-passage" class="text-sm sm:text-[15px] text-slate-800 leading-relaxed"></p>
+                    <!-- SAT Passage & Optional Chart/Image -->
+                    <div class="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/70 space-y-4">
+                        <div id="q-image-container" class="hidden flex flex-col items-center gap-3"></div>
+                        <div id="q-passage" class="text-sm sm:text-[15px] text-slate-800 leading-relaxed whitespace-pre-line"></div>
                     </div>
 
                     <!-- Question Stem -->
@@ -331,6 +332,18 @@
                     Confirm
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- IMAGE LIGHTBOX MODAL (Click Figure to Enlarge)                      -->
+    <!-- =================================================================== -->
+    <div id="image-lightbox-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4">
+        <div class="relative max-w-5xl max-h-[92vh] flex flex-col items-center">
+            <button id="close-image-lightbox" type="button" class="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-white text-slate-700 hover:bg-slate-100 shadow-lg flex items-center justify-center font-bold text-base cursor-pointer z-10">
+                ✕
+            </button>
+            <img id="image-lightbox-img" src="" alt="Enlarged Question Figure" class="max-w-full max-h-[88vh] rounded-2xl bg-white p-2 shadow-2xl object-contain" />
         </div>
     </div>
 
@@ -1196,8 +1209,82 @@
             diffBadge.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${diffMeta.color}`;
 
             document.getElementById("q-title").textContent = q.title || "";
-            document.getElementById("q-passage").textContent = q.passage || "";
             document.getElementById("q-stem").textContent = q.question || "";
+
+            // 解析短文中的 [[IMG:1]] 标记并在对应位置原地渲染配图，未标记的配图默认显示在短文上方
+            const passageEl = document.getElementById("q-passage");
+            const imgContainer = document.getElementById("q-image-container");
+            passageEl.innerHTML = "";
+            imgContainer.innerHTML = "";
+
+            const imageMap = {};
+            if (q.images && typeof q.images === "object") {
+                Object.entries(q.images).forEach(([k, v]) => {
+                    const src = String(v || "").trim();
+                    if (src) imageMap[String(k)] = src;
+                });
+            }
+            const legacyImg = String(q.image || "").trim();
+            if (legacyImg && !imageMap["1"]) {
+                imageMap["1"] = legacyImg;
+            }
+
+            const createZoomableFigure = (src, altText) => {
+                const fig = document.createElement("div");
+                fig.className = "my-3 flex flex-col items-center gap-1.5";
+                fig.innerHTML = `
+                    <img
+                        src=""
+                        alt=""
+                        class="student-zoomable-img max-h-[380px] max-w-full rounded-xl border border-slate-200 bg-white p-2 shadow-xs object-contain cursor-zoom-in hover:border-indigo-400 transition-colors"
+                    />
+                    <span class="text-[11px] font-medium text-slate-400">🔍 Click image to enlarge</span>
+                `;
+                const img = fig.querySelector("img");
+                img.src = src;
+                img.alt = altText;
+                img.addEventListener("click", () => {
+                    document.getElementById("image-lightbox-img").src = src;
+                    document.getElementById("image-lightbox-modal").classList.remove("hidden");
+                });
+                return fig;
+            };
+
+            const rawPassage = q.passage || "";
+            const usedKeys = new Set();
+            const tokenRegex = /\[\[IMG(?::([^\]]+))?\]\]/g;
+            let lastIdx = 0;
+            let match;
+
+            while ((match = tokenRegex.exec(rawPassage)) !== null) {
+                if (match.index > lastIdx) {
+                    passageEl.appendChild(document.createTextNode(rawPassage.slice(lastIdx, match.index)));
+                }
+                const key = String(match[1] || "1").trim();
+                const src = imageMap[key] || (key === "1" ? legacyImg : "");
+                if (src) {
+                    usedKeys.add(key);
+                    passageEl.appendChild(createZoomableFigure(src, `Question Figure ${key}`));
+                }
+                lastIdx = tokenRegex.lastIndex;
+            }
+            if (lastIdx < rawPassage.length) {
+                passageEl.appendChild(document.createTextNode(rawPassage.slice(lastIdx)));
+            }
+
+            const unreferencedImgs = Object.entries(imageMap).filter(([k]) => !usedKeys.has(k));
+            if (legacyImg && !usedKeys.has("1") && !unreferencedImgs.some(([, v]) => v === legacyImg)) {
+                unreferencedImgs.push(["1", legacyImg]);
+            }
+
+            if (unreferencedImgs.length > 0) {
+                unreferencedImgs.forEach(([k, src]) => {
+                    imgContainer.appendChild(createZoomableFigure(src, `Question Figure ${k}`));
+                });
+                imgContainer.classList.remove("hidden");
+            } else {
+                imgContainer.classList.add("hidden");
+            }
 
             const hintBox = document.getElementById("hint-box");
             const hintBtn = document.getElementById("btn-toggle-hint");
@@ -1381,7 +1468,7 @@
                 questionId: q.id,
                 questionTitle: q.title || "",
                 questionType: q.questionType || DEFAULT_TYPE_ID,
-                category: q.category || "1.1.1 Sentence Completions（语境填空）",
+                category: q.category || "General",
                 difficulty: q.difficulty || "medium",
                 selectedIndex: state.selectedOptionIndex,
                 selectedIndices: [...state.attemptChoices],
@@ -1659,7 +1746,7 @@
         }
 
         // =====================================================================
-        // 5B. AUTO-POPUP SYNCED WORD-POP EXPLANATION (2nd Wrong Attempt)
+        // 5B. AUTO-POPUP SYNCED WORD-POP EXPLANATION (2nd Attempt)
         // =====================================================================
         let activePopupContext = null;
 
@@ -1787,7 +1874,6 @@
                 const syncLoop = () => {
                     if (currentSession !== speechSessionId || !activeAudio) return;
                     if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
-                        // 扣除 MP3 尾部静音时长并增加 0.28 秒视觉提前量，使字幕紧贴或略微领先于语音
                         const tailSilence = Math.min(0.65, audio.duration * 0.04);
                         const effectiveDuration = Math.max(audio.duration - tailSilence, audio.duration * 0.92, 0.5);
                         const ratio = Math.min(1, (audio.currentTime + 0.28) / effectiveDuration);
@@ -1916,6 +2002,21 @@
         });
         document.getElementById("btn-close-explanation-popup").addEventListener("click", closeExplanationPopup);
         window.addEventListener("beforeunload", stopExplanationSpeech);
+
+        // Question Figure Lightbox Controls
+        const closeStudentLightbox = () => {
+            const modal = document.getElementById("image-lightbox-modal");
+            const img = document.getElementById("image-lightbox-img");
+            if (modal) modal.classList.add("hidden");
+            if (img) img.src = "";
+        };
+        document.getElementById("close-image-lightbox").addEventListener("click", closeStudentLightbox);
+        document.getElementById("image-lightbox-modal").addEventListener("click", (ev) => {
+            if (ev.target.id === "image-lightbox-modal") closeStudentLightbox();
+        });
+        document.addEventListener("keydown", (ev) => {
+            if (ev.key === "Escape") closeStudentLightbox();
+        });
 
         initDatabase();
     </script>
