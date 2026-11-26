@@ -387,39 +387,77 @@
 
         const DEFAULT_QUESTION_TYPES = [
             {
-                id: "logic",
-                name: "Logic",
-                labelZh: "逻辑题 (Logic)",
-                color: "indigo",
-                categories: ["Strengthen", "Weaken", "Inference", "Assumption", "Command of Evidence"]
-            },
-            {
-                id: "vocabulary",
-                name: "Vocabulary",
-                labelZh: "词汇题 (Vocabulary)",
+                id: "craft_and_structure",
+                code: "1",
+                name: "Craft and Structure",
+                labelZh: "1 Craft and Structure（文章结构与修辞）",
                 color: "violet",
-                categories: ["Words in Context", "Precision & Tone", "Academic Vocabulary"]
+                categories: [
+                    "1.1.1 Sentence Completions（语境填空）",
+                    "1.1.2 Meaning in Context（语境词义）",
+                    "1.2.1 Overall Purpose / Structure（整体目的/结构）",
+                    "1.2.2 Function of the Underlined Sentence（划线句功能）",
+                    "1.3 Cross-Text Connections（双重文本关联题）"
+                ]
             },
             {
-                id: "grammar",
-                name: "Grammar",
-                labelZh: "语法题 (Grammar)",
+                id: "information_and_ideas",
+                code: "2",
+                name: "Information and Ideas",
+                labelZh: "2 Information and Ideas（信息与观点）",
+                color: "indigo",
+                categories: [
+                    "2.1.1 Central Ideas（主旨）",
+                    "2.1.2 Details（细节）",
+                    "2.2.1 Textual Support（文本证据支持）",
+                    "2.2.2 Textual Weaken/Undermine（文本证据削弱）",
+                    "2.2.3 Quantitative（图表数据证据）",
+                    "2.3 Inferences（逻辑推断题）"
+                ]
+            },
+            {
+                id: "standard_english_conventions",
+                code: "3",
+                name: "Standard English Conventions",
+                labelZh: "3 Standard English Conventions（标准英语惯例）",
                 color: "emerald",
-                categories: ["Boundaries", "Form, Structure, and Sense", "Transitions"]
+                categories: [
+                    "3.1.1.1 Coordination & Subordination（并列与从属连接）",
+                    "3.1.1.2 Comma Splices & Run-on Sentences（逗号拼接与流水句修正）",
+                    "3.1.1.3 Sentence Fragments（残缺句修正）",
+                    "3.1.2.1 Appositives（同位语的限制性与非限制性标点）",
+                    "3.1.2.2 Nonrestrictive Relative Clauses（非限制性定语从句标点）",
+                    "3.1.2.3 Parenthetical Expressions（插入短语与副词的成对标点）",
+                    "3.1.3.1 Colons（冒号引出解释或列表）",
+                    "3.1.3.2 Dashes（单破折号与双破折号用法）",
+                    "3.1.3.3 Semicolons in Complex Lists（复杂并列清单中的分号升级）",
+                    "3.1.3.4 End-of-Sentence Punctuation（句末标点规范）",
+                    "3.2.1 Finite vs. Nonfinite Verbs（谓语动词与非谓语动词辨析）",
+                    "3.2.2 Subject-Verb Agreement（主谓一致）",
+                    "3.2.3 Verb Tense and Aspect（动词时态与体）",
+                    "3.2.4 Pronoun-Antecedent Agreement（代词指代一致）",
+                    "3.2.5 Subject-Modifier Placement / Dangling Modifiers（逻辑主语一致与悬垂修饰语）",
+                    "3.2.6 Plurals vs. Possessives（名词复数与所有格混淆）",
+                    "3.2.7 Parallel Structure（平行结构一致）"
+                ]
             },
             {
-                id: "reading",
-                name: "Reading Comprehension",
-                labelZh: "阅读理解 (Reading)",
-                color: "sky",
-                categories: ["Central Ideas & Details", "Text Structure & Purpose", "Cross-Text Connections"]
-            },
-            {
-                id: "rhetoric",
-                name: "Rhetorical Synthesis",
-                labelZh: "修辞综合 (Rhetoric)",
+                id: "expression_of_ideas",
+                code: "4",
+                name: "Expression of Ideas",
+                labelZh: "4 Expression of Ideas（观点表达）",
                 color: "amber",
-                categories: ["Rhetorical Synthesis", "Transitions"]
+                categories: [
+                    "4.1.1 Contrast / Concession（转折与让步）",
+                    "4.1.2 Cause and Effect（因果与推演）",
+                    "4.1.3 Continuation / Addition（顺承与递进）",
+                    "4.1.4 Illustration / Sequence（举例与顺序）",
+                    "4.2.1 Contrast / Compare（对比或比较两者异同）",
+                    "4.2.2 Emphasize a Similarity / Difference（强调共同点或差异）",
+                    "4.2.3 Introduce a Subject / Study（向陌生读者介绍某个主题或研究）",
+                    "4.2.4 Provide an Example / Support a Claim（提供具体例证或支撑某个观点）",
+                    "4.2.5 Explain a Process / Mechanism（解释某个过程或原理）"
+                ]
             }
         ];
 
@@ -580,10 +618,11 @@
         const ENGLISH_SEED_BY_PASSAGE = new Map(
             SEED_QUESTIONS.map((q) => [q.passage.slice(0, 60), q])
         );
+        const DEFAULT_TYPE_ID = "craft_and_structure";
 
         function normalizeQuestion(q) {
             const match = q?.passage ? ENGLISH_SEED_BY_PASSAGE.get(q.passage.slice(0, 60)) : null;
-            const inferredType = q?.questionType || match?.questionType || "logic";
+            const inferredType = q?.questionType || match?.questionType || DEFAULT_TYPE_ID;
             const inferredGroup = q?.groupNumber !== undefined && q?.groupNumber !== null
                 ? String(q.groupNumber).trim()
                 : (match?.groupNumber || "");
@@ -696,7 +735,7 @@
 
         function getTypeMeta(typeId) {
             const found = getQuestionTypes().find((t) => t.id === typeId);
-            return found || { id: typeId || "logic", name: typeId || "Logic", color: "indigo", categories: [] };
+            return found || { id: typeId || DEFAULT_TYPE_ID, name: typeId || "Craft and Structure", color: "violet", categories: [] };
         }
 
         function openAudioIdb() {
@@ -1012,7 +1051,7 @@
 
             if (Array.isArray(state.config.focusTypes) && state.config.focusTypes.length > 0) {
                 const typeSet = new Set(state.config.focusTypes);
-                const byType = pool.filter((q) => typeSet.has(q.questionType || "logic"));
+                const byType = pool.filter((q) => typeSet.has(q.questionType || DEFAULT_TYPE_ID));
                 if (byType.length > 0) pool = byType;
             }
 
@@ -1143,7 +1182,7 @@
                 groupBadge.classList.add("hidden");
             }
 
-            const tMeta = getTypeMeta(q.questionType || "logic");
+            const tMeta = getTypeMeta(q.questionType || DEFAULT_TYPE_ID);
             const tStyle = TYPE_COLOR_STYLES[tMeta.color] || TYPE_COLOR_STYLES.indigo;
             const typeBadge = document.getElementById("q-type-badge");
             typeBadge.textContent = tMeta.name;
@@ -1341,8 +1380,8 @@
             await recordAttemptToDb({
                 questionId: q.id,
                 questionTitle: q.title || "",
-                questionType: q.questionType || "logic",
-                category: q.category || "General",
+                questionType: q.questionType || DEFAULT_TYPE_ID,
+                category: q.category || "1.1.1 Sentence Completions（语境填空）",
                 difficulty: q.difficulty || "medium",
                 selectedIndex: state.selectedOptionIndex,
                 selectedIndices: [...state.attemptChoices],
@@ -1371,7 +1410,7 @@
                 typeStats[t.id] = { meta: t, total: 0, correct: 0 };
             });
             state.attempts.forEach((a) => {
-                const tid = a.questionType || "logic";
+                const tid = a.questionType || DEFAULT_TYPE_ID;
                 if (!typeStats[tid]) typeStats[tid] = { meta: getTypeMeta(tid), total: 0, correct: 0 };
                 typeStats[tid].total++;
                 if (a.isCorrect) typeStats[tid].correct++;
