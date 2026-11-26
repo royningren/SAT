@@ -152,6 +152,7 @@
                             <span id="active-set-serial" class="px-2 py-0.5 rounded-lg font-mono text-xs font-bold bg-indigo-600 text-white"></span>
                             <h2 id="active-set-name" class="text-sm sm:text-base font-bold text-slate-900 truncate"></h2>
                             <span id="active-set-progress-text" class="text-xs font-semibold text-indigo-700">0 / 0 completed</span>
+                            <span id="active-set-accuracy-badge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500">Accuracy: --%</span>
                         </div>
                         <div class="w-full max-w-md h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div id="active-set-progress-bar" class="h-full bg-indigo-600 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -258,16 +259,17 @@
                     </div>
                     <div class="space-y-1.5">
                         <h2 class="text-lg font-bold text-slate-900">All Assigned Practice Complete!</h2>
-                        <p id="daily-complete-message" class="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                            You have completed all currently open questions. Each question can only be practiced once unless your instructor re-opens it.
-                        </p>
-                    </div>
-                    <div id="daily-complete-summary" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700"></div>
-                </div>
-            </div>
-
-            <!-- Right Column: Question Type Mastery & Recent Practice History -->
+            <!-- Right Column: Set Accuracy, Question Type Mastery & Recent Practice History -->
             <aside class="lg:col-span-4 space-y-4">
+                <!-- Practice Set Accuracy Summary (Includes Completed & Open Sets) -->
+                <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-3.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-sm font-bold text-slate-900">Practice Set Accuracy</h3>
+                        <span id="set-accuracy-count" class="text-[11px] font-semibold text-slate-400">0 sets</span>
+                    </div>
+                    <div id="set-accuracy-list" class="space-y-3 max-h-[280px] overflow-y-auto pr-1"></div>
+                </div>
+
                 <!-- Mastery by Question Type -->
                 <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
                     <div class="flex items-center justify-between">
@@ -1021,6 +1023,7 @@
                 list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 state.practiceSets = list;
                 setsReady = true;
+                renderStudentStats();
                 if (initialRendered) {
                     // 若当前所在套题已被后台删除，自动返回套题大厅
                     if (state.activeSetId && !list.some((s) => s.id === state.activeSetId)) {
@@ -1073,11 +1076,27 @@
         function getSetProgressSummary(setObj) {
             const qById = new Map(state.questions.map((q) => [q.id, q]));
             const validQuestionIds = (setObj?.questionIds || []).filter((qid) => qById.has(qid));
-            const setAttempts = state.attempts.filter((a) => a.setId === setObj.id && validQuestionIds.includes(a.questionId));
-            const completedIds = new Set(setAttempts.map((a) => a.questionId));
+            const validSet = new Set(validQuestionIds);
+            const setAttempts = state.attempts
+                .filter((a) => a.setId === setObj.id && validSet.has(a.questionId))
+                .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+            const latestByQid = new Map();
+            setAttempts.forEach((a) => latestByQid.set(a.questionId, a));
+
+            const completedIds = new Set(latestByQid.keys());
             const remainingIds = validQuestionIds.filter((qid) => !completedIds.has(qid));
             const totalCount = validQuestionIds.length;
             const completedCount = completedIds.size;
+
+            let correctCount = 0;
+            let wrongCount = 0;
+            latestByQid.forEach((att) => {
+                if (isAttemptCountedCorrect(att)) correctCount++;
+                else wrongCount++;
+            });
+            const accuracy = completedCount > 0 ? Math.round((correctCount / completedCount) * 100) : null;
+
             const isCompleted = totalCount > 0 && remainingIds.length === 0;
             const savedState = state.setProgressMap?.[setObj.id] || null;
             const hasSavedProgress = completedCount > 0 || Boolean(savedState && savedState.currentQuestionId && remainingIds.includes(savedState.currentQuestionId));
@@ -1088,6 +1107,9 @@
                 remainingIds,
                 totalCount,
                 completedCount,
+                correctCount,
+                wrongCount,
+                accuracy,
                 isCompleted,
                 savedState,
                 hasSavedProgress
@@ -1139,6 +1161,22 @@
             document.getElementById("active-set-name").textContent = activeSet.name || "Practice Set";
             document.getElementById("active-set-progress-text").textContent = `${summary.completedCount} / ${summary.totalCount} completed`;
             document.getElementById("active-set-progress-bar").style.width = `${pct}%`;
+
+            const accBadge = document.getElementById("active-set-accuracy-badge");
+            if (accBadge) {
+                if (summary.accuracy === null) {
+                    accBadge.textContent = "Accuracy: --%";
+                    accBadge.className = "px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500";
+                } else {
+                    const cls = summary.accuracy >= 75
+                        ? "bg-emerald-100 text-emerald-700"
+                        : summary.accuracy >= 50
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-rose-100 text-rose-700";
+                    accBadge.textContent = `Accuracy: ${summary.accuracy}% (${summary.correctCount}/${summary.completedCount})`;
+                    accBadge.className = `px-2 py-0.5 rounded-full text-xs font-bold ${cls}`;
+                }
+            }
         }
 
         function renderStudentWorkspace() {
@@ -1208,6 +1246,16 @@
                 const summary = getSetProgressSummary(setObj);
                 const pct = summary.totalCount > 0 ? Math.round((summary.completedCount / summary.totalCount) * 100) : 0;
                 const createdStr = setObj.createdAt ? new Date(setObj.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+                const accColor = summary.accuracy === null
+                    ? "text-slate-500"
+                    : summary.accuracy >= 75
+                        ? "text-emerald-600"
+                        : summary.accuracy >= 50
+                            ? "text-amber-600"
+                            : "text-rose-600";
+                const accText = summary.accuracy === null
+                    ? "--%"
+                    : `${summary.accuracy}% (${summary.correctCount}/${summary.completedCount})`;
 
                 const card = document.createElement("div");
                 card.className = "rounded-2xl border border-slate-200 hover:border-indigo-300 bg-slate-50/70 hover:bg-indigo-50/30 p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4";
@@ -1226,6 +1274,8 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                             <span>Completed <strong class="text-slate-800">${summary.completedCount} / ${summary.totalCount}</strong></span>
+                            <span>·</span>
+                            <span>Accuracy <strong class="${accColor}">${accText}</strong></span>
                             <span>·</span>
                             <span><strong class="text-indigo-700">${summary.remainingIds.length}</strong> remaining</span>
                             ${createdStr ? `<span>· Opened ${createdStr}</span>` : ""}
@@ -1343,13 +1393,15 @@
             const summary = getSetProgressSummary(activeSet);
             if (summary.remainingIds.length === 0) {
                 const finishedName = activeSet.name || activeSet.serialNumber;
+                const finalAccText = summary.accuracy !== null ? `${summary.accuracy}% (${summary.correctCount}/${summary.totalCount})` : "--%";
                 clearSavedSetProgress(activeSet.id);
                 state.activeSetId = null;
                 state.currentQuestion = null;
                 state.selectedOptionIndex = null;
                 state.isAnswered = false;
                 renderStudentWorkspace();
-                showToast(`🎉 Set "${finishedName}" completed!`, "success");
+                renderStudentStats();
+                showToast(`🎉 Set "${finishedName}" completed! Accuracy: ${finalAccText}`, "success");
                 return;
             }
 
@@ -1373,7 +1425,7 @@
                     const c = a.category || "General";
                     if (!catStats[c]) catStats[c] = { total: 0, correct: 0 };
                     catStats[c].total++;
-                    if (a.isCorrect) catStats[c].correct++;
+                    if (isAttemptCountedCorrect(a)) catStats[c].correct++;
                 });
                 const sorted = [...candidates].sort((a, b) => {
                     const sa = catStats[a.category];
@@ -1383,7 +1435,18 @@
                     return accA - accB;
                 });
                 chosen = sorted[0];
-                tutorPrompt = `Targeting your focus area: ${chosen.category} (${summary.completedCount + 1}/${summary.totalCount}).`;
+                tutorPrompt = `Targeting your focus area: ${chosen.category}. Take your time analyzing the clues in the passage.`;
+            } else if (strategy === "wrong_review") {
+                const latestOutcome = new Map();
+                state.attempts.forEach((a) => latestOutcome.set(a.questionId, isAttemptCountedCorrect(a)));
+                const stillWrong = candidates.filter((q) => latestOutcome.get(q.id) === false);
+                if (stillWrong.length > 0) {
+                    chosen = stillWrong[Math.floor(Math.random() * stillWrong.length)];
+                    tutorPrompt = `Let's review a previously missed ${getTypeMeta(chosen.questionType).name} question on ${chosen.category}.`;
+                } else {
+                    chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                    tutorPrompt = `Here is a ${chosen.category} question (${summary.completedCount + 1}/${summary.totalCount}).`;
+                }
             } else if (strategy === "random") {
                 chosen = candidates[Math.floor(Math.random() * candidates.length)];
                 tutorPrompt = `Question ${summary.completedCount + 1} of ${summary.totalCount} (${getTypeMeta(chosen.questionType).name} · ${chosen.category}).`;
@@ -1392,7 +1455,7 @@
                 const finalPool = byDiff.length > 0 ? byDiff : candidates;
                 chosen = finalPool[Math.floor(Math.random() * finalPool.length)];
                 const diffLabel = (DIFFICULTY_META[chosen.difficulty] || DIFFICULTY_META.medium).label;
-                tutorPrompt = `Question ${summary.completedCount + 1} of ${summary.totalCount} · ${diffLabel} difficulty (${chosen.category}).`;
+                tutorPrompt = `Matched at ${diffLabel} difficulty (${getTypeMeta(chosen.questionType).name} · ${chosen.category}). Read closely and pick the strongest choice.`;
             }
 
             state.currentQuestion = chosen;
@@ -1403,8 +1466,245 @@
             state.isAnswered = false;
 
             document.getElementById("teacher-message").textContent = tutorPrompt;
-            updateActiveSetBarUI();
             renderCurrentQuestion();
+        }
+
+        function isAttemptCountedCorrect(att) {
+            if (!att) return false;
+            const used = Number(att.attemptsUsed) || (Array.isArray(att.selectedIndices) ? att.selectedIndices.length : 1);
+            if (used >= 2) return false;
+            return Boolean(att.isCorrect);
+        }
+
+        async function handleAnswerSubmit() {
+            const q = state.currentQuestion;
+            const activeSet = state.activeSetId ? state.practiceSets.find((s) => s.id === state.activeSetId) : null;
+            if (!q || !activeSet || state.selectedOptionIndex === null || state.isAnswered) return;
+
+            const isCorrect = state.selectedOptionIndex === q.correctIndex;
+            const letters = ["A", "B", "C", "D"];
+            const correctLetter = letters[q.correctIndex] || "A";
+
+            state.attemptChoices.push(state.selectedOptionIndex);
+
+            if (!isCorrect && state.attemptNumber === 1) {
+                state.eliminatedIndices.add(state.selectedOptionIndex);
+                state.selectedOptionIndex = null;
+                state.attemptNumber = 2;
+
+                document.getElementById("teacher-message").textContent =
+                    "Not quite! Take another close look at the passage and eliminate distractions—you have one more try (note: 2nd-try answers are recorded as missed for review).";
+                const submitBtn = document.getElementById("btn-submit-answer");
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Submit Second Try";
+                renderOptionsList();
+                // 第 1 次答错后自动保存当前进度，防止中途关闭页面丢失第二次机会状态
+                await saveCurrentSetProgress(false);
+                return;
+            }
+
+            state.isAnswered = true;
+            // 规则：仅一次答对才算答对；回答 2 次才答对的一律作为错题统计
+            const solvedOnFirstTry = isCorrect && state.attemptNumber === 1;
+            const countedAsCorrect = solvedOnFirstTry;
+
+            if (countedAsCorrect) {
+                state.streak++;
+                const threshold = Number(state.config.autoAdvanceThreshold) || 2;
+                if (state.streak >= threshold) {
+                    if (state.targetDifficulty === "easy") state.targetDifficulty = "medium";
+                    else if (state.targetDifficulty === "medium") state.targetDifficulty = "hard";
+                }
+            } else {
+                state.streak = 0;
+                if (state.targetDifficulty === "hard") state.targetDifficulty = "medium";
+                else if (state.targetDifficulty === "medium") state.targetDifficulty = "easy";
+            }
+
+            updateHeaderScopeAndStrategyUI();
+            renderOptionsList();
+
+            const submitBtn = document.getElementById("btn-submit-answer");
+            const nextBtn = document.getElementById("btn-next-question");
+            submitBtn.classList.add("hidden");
+            nextBtn.classList.remove("hidden");
+
+            const expBox = document.getElementById("explanation-box");
+            const resultHeader = document.getElementById("result-header");
+            expBox.classList.remove("hidden");
+            document.getElementById("explanation-text").textContent = q.explanation || "No explanation provided.";
+
+            if (solvedOnFirstTry) {
+                resultHeader.className = "flex items-center gap-2 font-bold text-sm sm:text-base text-emerald-700";
+                resultHeader.textContent = `✅ Correct! (Answer: ${correctLetter})`;
+                document.getElementById("teacher-message").textContent =
+                    "Spot on! Review the breakdown below or move on to the next question.";
+            } else if (isCorrect) {
+                resultHeader.className = "flex items-center gap-2 font-bold text-sm sm:text-base text-rose-700";
+                resultHeader.textContent = `⚠️ Found ${correctLetter} on 2nd try — Counted as Missed`;
+                document.getElementById("teacher-message").textContent =
+                    `You found ${correctLetter} on your second try (recorded as a missed question since it required 2 attempts). Listen to the explanation below.`;
+            } else {
+                resultHeader.className = "flex items-center gap-2 font-bold text-sm sm:text-base text-rose-700";
+                resultHeader.textContent = `❌ Incorrect — The correct answer is ${correctLetter}`;
+                document.getElementById("teacher-message").textContent =
+                    `That was your second attempt. The correct choice is ${correctLetter}. Listen to and read the step-by-step explanation.`;
+            }
+
+            await recordAttemptToDb({
+                setId: activeSet.id,
+                setSerialNumber: activeSet.serialNumber || "",
+                setName: activeSet.name || "",
+                questionId: q.id,
+                questionTitle: q.title || "",
+                questionType: q.questionType || DEFAULT_TYPE_ID,
+                category: q.category || "General",
+                difficulty: q.difficulty || "medium",
+                selectedIndex: state.selectedOptionIndex,
+                selectedIndices: [...state.attemptChoices],
+                correctIndex: q.correctIndex,
+                isCorrect: Boolean(countedAsCorrect),
+                attemptsUsed: state.attemptNumber,
+                timestamp: Date.now()
+            });
+
+            await clearSavedSetProgress(activeSet.id);
+            updateActiveSetBarUI();
+
+            const updatedSummary = getSetProgressSummary(activeSet);
+            nextBtn.textContent = updatedSummary.remainingIds.length === 0
+                ? "🎉 Finish Set & Return to Sets"
+                : "Next Question →";
+
+            // 第 2 次作答（无论第 2 次答对还是答错）均自动弹出语音解析画面
+            if (!solvedOnFirstTry) {
+                openExplanationPopup(q, correctLetter);
+            }
+        }
+
+        function renderStudentStats() {
+            const total = state.attempts.length;
+            const correct = state.attempts.filter((a) => isAttemptCountedCorrect(a)).length;
+            document.getElementById("stat-total").textContent = String(total);
+            document.getElementById("stat-accuracy").textContent = total > 0 ? `${Math.round((correct / total) * 100)}%` : "--%";
+            document.getElementById("stat-streak").textContent = String(state.streak);
+
+            // Render per-set accuracy list (covers both completed and in-progress sets)
+            const setAccEl = document.getElementById("set-accuracy-list");
+            const setAccCountEl = document.getElementById("set-accuracy-count");
+            if (setAccEl) {
+                const allSets = state.practiceSets || [];
+                if (setAccCountEl) {
+                    setAccCountEl.textContent = `${allSets.length} set${allSets.length === 1 ? "" : "s"}`;
+                }
+                if (allSets.length === 0) {
+                    setAccEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No practice sets available yet.</p>`;
+                } else {
+                    setAccEl.innerHTML = "";
+                    allSets.forEach((setObj) => {
+                        const summary = getSetProgressSummary(setObj);
+                        const acc = summary.accuracy;
+                        const barColor = acc === null
+                            ? "bg-slate-200"
+                            : acc >= 75
+                                ? "bg-emerald-500"
+                                : acc >= 50
+                                    ? "bg-amber-500"
+                                    : "bg-rose-500";
+                        const accTextColor = acc === null
+                            ? "text-slate-400"
+                            : acc >= 75
+                                ? "text-emerald-600"
+                                : acc >= 50
+                                    ? "text-amber-600"
+                                    : "text-rose-600";
+                        const statusPill = summary.isCompleted
+                            ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-700">✓ Done</span>`
+                            : summary.completedCount > 0
+                                ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700">In Progress</span>`
+                                : `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-500">Not Started</span>`;
+
+                        const item = document.createElement("div");
+                        item.className = "rounded-xl bg-slate-50/90 border border-slate-200/70 p-3 space-y-1.5";
+                        item.innerHTML = `
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-900 text-white font-mono text-[10px] font-bold flex-shrink-0">${setObj.serialNumber || "--"}</span>
+                                    <span class="text-xs font-semibold text-slate-800 truncate set-acc-name"></span>
+                                </div>
+                                ${statusPill}
+                            </div>
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-slate-500">Progress: <strong class="text-slate-700">${summary.completedCount}/${summary.totalCount}</strong></span>
+                                <span class="font-bold ${accTextColor}">
+                                    ${acc !== null ? `Accuracy ${acc}% (${summary.correctCount}/${summary.completedCount})` : "Accuracy --%"}
+                                </span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
+                                <div class="h-full ${barColor} rounded-full transition-all duration-300" style="width: ${acc !== null ? Math.max(acc, 6) : 0}%"></div>
+                            </div>
+                        `;
+                        item.querySelector(".set-acc-name").textContent = setObj.name || "SAT Practice Set";
+                        setAccEl.appendChild(item);
+                    });
+                }
+            }
+
+            const masteryEl = document.getElementById("type-mastery-list");
+            const typeStats = {};
+            getQuestionTypes().forEach((t) => {
+                typeStats[t.id] = { meta: t, total: 0, correct: 0 };
+            });
+            state.attempts.forEach((a) => {
+                const tid = a.questionType || DEFAULT_TYPE_ID;
+                if (!typeStats[tid]) typeStats[tid] = { meta: getTypeMeta(tid), total: 0, correct: 0 };
+                typeStats[tid].total++;
+                if (isAttemptCountedCorrect(a)) typeStats[tid].correct++;
+            });
+
+            masteryEl.innerHTML = "";
+            Object.values(typeStats).forEach((s) => {
+                const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
+                const barColor = s.total === 0 ? "bg-slate-200" : pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-rose-500";
+                const item = document.createElement("div");
+                item.className = "space-y-1";
+                item.innerHTML = `
+                    <div class="flex justify-between text-xs">
+                        <span class="font-semibold text-slate-800">${s.meta.name}</span>
+                        <span class="text-slate-500">${s.total > 0 ? `${pct}% (${s.correct}/${s.total})` : "Not started"}</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full ${barColor} rounded-full transition-all duration-300" style="width: ${s.total > 0 ? Math.max(pct, 6) : 0}%"></div>
+                    </div>
+                `;
+                masteryEl.appendChild(item);
+            });
+
+            const recentEl = document.getElementById("recent-history-list");
+            const recent = [...state.attempts].slice(-8).reverse();
+            if (recent.length === 0) {
+                recentEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No questions completed yet.</p>`;
+                return;
+            }
+            recentEl.innerHTML = "";
+            recent.forEach((att) => {
+                const countedOk = isAttemptCountedCorrect(att);
+                const row = document.createElement("div");
+                row.className = "flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/70 text-xs";
+                row.innerHTML = `
+                    <div class="min-w-0">
+                        <div class="font-semibold text-slate-800 truncate att-title"></div>
+                        <div class="text-[11px] text-slate-400 truncate">${att.setSerialNumber ? `[${att.setSerialNumber}] ` : ""}${getTypeMeta(att.questionType).name} · ${att.category || "General"}</div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${
+                        countedOk ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                    }">
+                        ${countedOk ? "✓ Correct" : "✕ Missed"}
+                    </span>
+                `;
+                row.querySelector(".att-title").textContent = att.questionTitle || att.questionId;
+                recentEl.appendChild(row);
+            });
         }
 
         function renderCurrentQuestion() {
@@ -1434,9 +1734,9 @@
             diffBadge.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${diffMeta.color}`;
 
             document.getElementById("q-title").textContent = q.title || "";
+            document.getElementById("q-passage").textContent = q.passage || "";
             document.getElementById("q-stem").textContent = q.question || "";
 
-            // 解析短文中的 [[IMG:1]] 标记并在对应位置原地渲染配图，未标记的配图默认显示在短文上方
             const passageEl = document.getElementById("q-passage");
             const imgContainer = document.getElementById("q-image-container");
             passageEl.innerHTML = "";
@@ -1613,171 +1913,6 @@
                 writeLS(LS_KEYS.ATTEMPTS, state.attempts);
                 renderStudentStats();
             }
-        }
-
-        async function handleAnswerSubmit() {
-            const q = state.currentQuestion;
-            const activeSet = state.activeSetId ? state.practiceSets.find((s) => s.id === state.activeSetId) : null;
-            if (!q || !activeSet || state.selectedOptionIndex === null || state.isAnswered) return;
-
-            const isCorrect = state.selectedOptionIndex === q.correctIndex;
-            const letters = ["A", "B", "C", "D"];
-            const correctLetter = letters[q.correctIndex] || "A";
-
-            state.attemptChoices.push(state.selectedOptionIndex);
-
-            if (!isCorrect && state.attemptNumber === 1) {
-                state.eliminatedIndices.add(state.selectedOptionIndex);
-                state.selectedOptionIndex = null;
-                state.attemptNumber = 2;
-
-                document.getElementById("teacher-message").textContent =
-                    "Not quite! Take another close look at the passage and eliminate distractions—you have one more try.";
-                const submitBtn = document.getElementById("btn-submit-answer");
-                submitBtn.disabled = true;
-                submitBtn.textContent = "Submit Second Try";
-                renderOptionsList();
-                // 第 1 次答错后自动保存当前进度，防止中途关闭页面丢失第二次机会状态
-                await saveCurrentSetProgress(false);
-                return;
-            }
-
-            state.isAnswered = true;
-            const solvedOnFirstTry = isCorrect && state.attemptNumber === 1;
-
-            if (isCorrect) {
-                state.streak++;
-                const threshold = Number(state.config.autoAdvanceThreshold) || 2;
-                if (state.streak >= threshold) {
-                    if (state.targetDifficulty === "easy") state.targetDifficulty = "medium";
-                    else if (state.targetDifficulty === "medium") state.targetDifficulty = "hard";
-                }
-            } else {
-                state.streak = 0;
-                if (state.targetDifficulty === "hard") state.targetDifficulty = "medium";
-                else if (state.targetDifficulty === "medium") state.targetDifficulty = "easy";
-            }
-
-            updateHeaderScopeAndStrategyUI();
-            renderOptionsList();
-
-            const submitBtn = document.getElementById("btn-submit-answer");
-            const nextBtn = document.getElementById("btn-next-question");
-            submitBtn.classList.add("hidden");
-            nextBtn.classList.remove("hidden");
-
-            const expBox = document.getElementById("explanation-box");
-            const resultHeader = document.getElementById("result-header");
-            expBox.classList.remove("hidden");
-            document.getElementById("explanation-text").textContent = q.explanation || "No explanation provided.";
-
-            if (isCorrect) {
-                resultHeader.className = "flex items-center gap-2 font-bold text-sm sm:text-base text-emerald-700";
-                resultHeader.textContent = solvedOnFirstTry
-                    ? `✅ Correct! (Answer: ${correctLetter})`
-                    : `✅ Correct on your second try! (Answer: ${correctLetter})`;
-                document.getElementById("teacher-message").textContent = solvedOnFirstTry
-                    ? "Spot on! Review the breakdown below or move on to the next question."
-                    : "Nice recovery on your second try! Review the explanation below to lock in the reasoning.";
-            } else {
-                resultHeader.className = "flex items-center gap-2 font-bold text-sm sm:text-base text-rose-700";
-                resultHeader.textContent = `❌ Incorrect — The correct answer is ${correctLetter}`;
-                document.getElementById("teacher-message").textContent =
-                    `That was your second attempt. The correct choice is ${correctLetter}. Listen to and read the step-by-step explanation.`;
-            }
-
-            await recordAttemptToDb({
-                setId: activeSet.id,
-                setSerialNumber: activeSet.serialNumber || "",
-                setName: activeSet.name || "",
-                questionId: q.id,
-                questionTitle: q.title || "",
-                questionType: q.questionType || DEFAULT_TYPE_ID,
-                category: q.category || "General",
-                difficulty: q.difficulty || "medium",
-                selectedIndex: state.selectedOptionIndex,
-                selectedIndices: [...state.attemptChoices],
-                correctIndex: q.correctIndex,
-                isCorrect: Boolean(isCorrect),
-                attemptsUsed: state.attemptNumber,
-                timestamp: Date.now()
-            });
-
-            await clearSavedSetProgress(activeSet.id);
-            updateActiveSetBarUI();
-
-            const updatedSummary = getSetProgressSummary(activeSet);
-            nextBtn.textContent = updatedSummary.remainingIds.length === 0
-                ? "🎉 Finish Set & Return to Sets"
-                : "Next Question →";
-
-            // 第 2 次作答（无论第 2 次答对还是答错）均自动弹出语音解析画面
-            if (!solvedOnFirstTry) {
-                openExplanationPopup(q, correctLetter);
-            }
-        }
-
-        function renderStudentStats() {
-            const total = state.attempts.length;
-            const correct = state.attempts.filter((a) => a.isCorrect).length;
-            document.getElementById("stat-total").textContent = String(total);
-            document.getElementById("stat-accuracy").textContent = total > 0 ? `${Math.round((correct / total) * 100)}%` : "--%";
-            document.getElementById("stat-streak").textContent = String(state.streak);
-
-            const masteryEl = document.getElementById("type-mastery-list");
-            const typeStats = {};
-            getQuestionTypes().forEach((t) => {
-                typeStats[t.id] = { meta: t, total: 0, correct: 0 };
-            });
-            state.attempts.forEach((a) => {
-                const tid = a.questionType || DEFAULT_TYPE_ID;
-                if (!typeStats[tid]) typeStats[tid] = { meta: getTypeMeta(tid), total: 0, correct: 0 };
-                typeStats[tid].total++;
-                if (a.isCorrect) typeStats[tid].correct++;
-            });
-
-            masteryEl.innerHTML = "";
-            Object.values(typeStats).forEach((s) => {
-                const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
-                const barColor = s.total === 0 ? "bg-slate-200" : pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-rose-500";
-                const item = document.createElement("div");
-                item.className = "space-y-1";
-                item.innerHTML = `
-                    <div class="flex justify-between text-xs">
-                        <span class="font-semibold text-slate-800">${s.meta.name}</span>
-                        <span class="text-slate-500">${s.total > 0 ? `${pct}% (${s.correct}/${s.total})` : "Not started"}</span>
-                    </div>
-                    <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full ${barColor} rounded-full transition-all duration-300" style="width: ${s.total > 0 ? Math.max(pct, 6) : 0}%"></div>
-                    </div>
-                `;
-                masteryEl.appendChild(item);
-            });
-
-            const recentEl = document.getElementById("recent-history-list");
-            const recent = [...state.attempts].slice(-8).reverse();
-            if (recent.length === 0) {
-                recentEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No questions completed yet.</p>`;
-                return;
-            }
-            recentEl.innerHTML = "";
-            recent.forEach((att) => {
-                const row = document.createElement("div");
-                row.className = "flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/70 text-xs";
-                row.innerHTML = `
-                    <div class="min-w-0">
-                        <div class="font-semibold text-slate-800 truncate att-title"></div>
-                        <div class="text-[11px] text-slate-400 truncate">${att.setSerialNumber ? `[${att.setSerialNumber}] ` : ""}${getTypeMeta(att.questionType).name} · ${att.category || "General"}</div>
-                    </div>
-                    <span class="px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${
-                        att.isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                    }">
-                        ${att.isCorrect ? "✓ Correct" : "✕ Missed"}
-                    </span>
-                `;
-                row.querySelector(".att-title").textContent = att.questionTitle || att.questionId;
-                recentEl.appendChild(row);
-            });
         }
 
         function handleResetStudentProgress() {
